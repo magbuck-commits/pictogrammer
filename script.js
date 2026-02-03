@@ -295,8 +295,6 @@ function addToCanvas(content, x, y, itemName = '') {
     
     item.style.left = (x - 40) + 'px';
     item.style.top = (y - 40) + 'px';
-    item.style.width = '90px';
-    item.style.height = '120px';
     
     // Add event listeners
     item.addEventListener('mousedown', handleCanvasItemMouseDown);
@@ -816,8 +814,6 @@ function saveLayout() {
         const itemData = {
             left: item.style.left,
             top: item.style.top,
-            width: item.style.width,
-            height: item.style.height,
             zIndex: item.style.zIndex || 'auto',
             title: titleElement?.textContent || 'Titel',
             content: null
@@ -920,8 +916,6 @@ function loadLayout(id) {
         item.className = 'canvas-item';
         item.style.left = itemData.left;
         item.style.top = itemData.top;
-        item.style.width = itemData.width;
-        item.style.height = itemData.height;
         item.style.zIndex = itemData.zIndex;
         
         // Title holder (top)
