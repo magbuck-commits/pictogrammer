@@ -312,19 +312,6 @@ function addToCanvas(content, x, y, itemName = '') {
     // Remove canvas hint when first item is added
     canvas.classList.add('has-items');
     
-    // Title holder (top)
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'canvas-item-title';
-    titleDiv.textContent = itemName || 'Titel';
-    titleDiv.title = 'Klik for at redigere overskrift';
-    
-    titleDiv.addEventListener('click', (e) => {
-        e.stopPropagation();
-        editItemTitle(titleDiv, item);
-    });
-    
-    item.appendChild(titleDiv);
-    
     // Content holder
     const contentDiv = document.createElement('div');
     contentDiv.className = 'canvas-item-content';
@@ -348,6 +335,19 @@ function addToCanvas(content, x, y, itemName = '') {
     }
     
     item.appendChild(contentDiv);
+
+    // Title holder (bottom)
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'canvas-item-title';
+    titleDiv.textContent = itemName || 'Titel';
+    titleDiv.title = 'Klik for at redigere overskrift';
+    
+    titleDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editItemTitle(titleDiv, item);
+    });
+    
+    item.appendChild(titleDiv);
     
     item.style.left = (x - 40) + 'px';
     item.style.top = (y - 40) + 'px';
@@ -978,19 +978,6 @@ function loadLayout(id) {
         item.style.top = itemData.top;
         item.style.zIndex = itemData.zIndex;
         
-        // Title holder (top)
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'canvas-item-title';
-        titleDiv.textContent = itemData.title || 'Titel';
-        titleDiv.title = 'Klik for at redigere overskrift';
-        
-        titleDiv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            editItemTitle(titleDiv, item);
-        });
-        
-        item.appendChild(titleDiv);
-        
         // Content holder
         const contentDiv = document.createElement('div');
         contentDiv.className = 'canvas-item-content';
@@ -1007,6 +994,19 @@ function loadLayout(id) {
         }
         
         item.appendChild(contentDiv);
+
+        // Title holder (bottom)
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'canvas-item-title';
+        titleDiv.textContent = itemData.title || 'Titel';
+        titleDiv.title = 'Klik for at redigere overskrift';
+        
+        titleDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editItemTitle(titleDiv, item);
+        });
+        
+        item.appendChild(titleDiv);
         
         // (no bottom label) -- only title on top
         

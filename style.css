@@ -358,7 +358,7 @@ header p {
     font-weight: 600;
     color: #333;
     background: rgba(102, 126, 234, 0.1);
-    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
     cursor: pointer;
     transition: background 0.2s ease;
     word-break: break-word;
