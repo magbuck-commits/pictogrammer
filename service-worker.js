@@ -1,9 +1,7 @@
 // Service Worker for Pictogrammer PWA
-const CACHE_NAME = 'pictogrammer-v2';
+const CACHE_NAME = 'pictogrammer-v3';
 const urlsToCache = [
   './',
-  './index.html',
-  './style.css',
   './script.js',
   './manifest.json'
 ];
@@ -42,6 +40,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const noCacheDestinations = new Set(['document', 'style', 'script']);
+  if (noCacheDestinations.has(event.request.destination)) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
 
