@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Byg picturagrammer strukturer med drag & drop">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pictogrammer">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180'/><text x='50%' y='50%' font-size='80' fill='white' text-anchor='middle' dominant-baseline='middle'>📦</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <title>Pictogrammer - Drag & Drop Builder</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Pictogrammer Builder</h1>
+            <p>Byg din struktur ved at drage pictogrammer til canvasset</p>
+                    <div style="margin-top:10px; text-align:center;">
+                        <button id="installBtn" class="install-btn" style="display:none;">➕ Installer App</button>
+                    </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Venstre sidebar - Søg, Bibliotek og Upload -->
+            <aside class="sidebar">
+                <div class="section search-section">
+                    <h2>Søg</h2>
+                    <input type="text" id="searchInput" placeholder="Søg i bibliotek...">
+                </div>
+
+                <div class="scrollable-section">
+                    <div class="section">
+                        <h2>Bibliotek</h2>
+                        <div class="library" id="library">
+                            <!-- Pictogrammer tilføjes her -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>Upload</h2>
+                        <input type="file" id="uploadInput" accept="image/*" multiple>
+                        <label for="uploadInput" class="upload-btn">+ Upload Billeder</label>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Centertstykke - Canvas -->
+            <main class="canvas-area">
+                <div class="canvas-header">
+                    <h2>Canvas</h2>
+                    <div class="canvas-buttons">
+                        <button onclick="saveLayout()">💾 Gem Layout</button>
+                        <button onclick="clearCanvas()">🗑️ Ryd Canvas</button>
+                        <button onclick="downloadAsImage()">⬇️ Download</button>
+                        <button onclick="toggleSavedLayouts()">📂 Vis Gemte Layouts</button>
+                    </div>
+                </div>
+                <div id="savedLayoutsPanel" class="saved-layouts-panel" style="display:none;">
+                    <h3>Dine Gemte Layouts</h3>
+                    <div id="savedLayouts"></div>
+                </div>
+
+                <div class="canvas" id="canvas">
+                    <p class="canvas-hint">Drag pictogrammer her...</p>
+                </div>
+            </main>
+
+            <!-- Højre sidebar (fjernet) -->
+        </div>
+    </div>
+
+    <!-- Kontekstmenu -->
+    <div id="contextMenu" class="context-menu">
+        <button onclick="bringToFront()">Bring til forgrunden</button>
+        <button onclick="sendToBack()">Send til baggrund</button>
+        <button onclick="deleteSelected()">Slet</button>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(registration => console.log('Service Worker registered'))
+                .catch(error => console.log('Service Worker registration failed:', error));
+        }
+
+        // Install prompt handling
+        let installPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Store the event for later use
+            installPrompt = e;
+            // Don't prevent default - let the browser handle it
+        });
+
+        // Optional: Add install button if needed
+        window.addEventListener('appinstalled', () => {
+            console.log('App installed successfully');
+            installPrompt = null;
+        });
+    </script>
+</body>
+</html>
