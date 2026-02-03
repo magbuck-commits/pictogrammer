@@ -89,9 +89,65 @@ document.addEventListener('DOMContentLoaded', () => {
     setupUploadListener();
     setupCanvasSizeListener();
     setupBgColorListener();
+    setupCanvasResizeHandler();
     loadSavedLayouts();
     setupInstallButton();
 });
+
+function getCanvasElement() {
+    return document.getElementById('canvas');
+}
+
+function updateItemRelativePosition(item) {
+    const canvas = getCanvasElement();
+    if (!canvas) return;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const maxLeft = Math.max(0, canvasRect.width - itemRect.width);
+    const maxTop = Math.max(0, canvasRect.height - itemRect.height);
+    const leftPx = parseFloat(item.style.left) || 0;
+    const topPx = parseFloat(item.style.top) || 0;
+
+    item.dataset.relLeft = maxLeft > 0 ? (leftPx / maxLeft) : 0;
+    item.dataset.relTop = maxTop > 0 ? (topPx / maxTop) : 0;
+}
+
+function applyItemRelativePosition(item) {
+    const canvas = getCanvasElement();
+    if (!canvas) return;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const maxLeft = Math.max(0, canvasRect.width - itemRect.width);
+    const maxTop = Math.max(0, canvasRect.height - itemRect.height);
+    let relLeft = parseFloat(item.dataset.relLeft);
+    let relTop = parseFloat(item.dataset.relTop);
+
+    if (Number.isNaN(relLeft) || Number.isNaN(relTop)) {
+        const leftPx = parseFloat(item.style.left) || 0;
+        const topPx = parseFloat(item.style.top) || 0;
+        relLeft = maxLeft > 0 ? (leftPx / maxLeft) : 0;
+        relTop = maxTop > 0 ? (topPx / maxTop) : 0;
+        item.dataset.relLeft = relLeft;
+        item.dataset.relTop = relTop;
+    }
+
+    item.style.left = (maxLeft * relLeft) + 'px';
+    item.style.top = (maxTop * relTop) + 'px';
+}
+
+function applyAllItemPositions() {
+    document.querySelectorAll('.canvas-item').forEach(item => {
+        applyItemRelativePosition(item);
+    });
+}
+
+function setupCanvasResizeHandler() {
+    window.addEventListener('resize', () => {
+        applyAllItemPositions();
+    });
+}
 
 // Setup install prompt handling and button
 function setupInstallButton() {
@@ -305,6 +361,7 @@ function addToCanvas(content, x, y, itemName = '') {
     });
     
     canvas.appendChild(item);
+    updateItemRelativePosition(item);
 }
 
 // Handle mouse down on canvas item for dragging
@@ -317,7 +374,8 @@ function handleCanvasItemMouseDown(e) {
     selectItem(draggedElement);
     
     const rect = draggedElement.getBoundingClientRect();
-    const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+    const canvas = document.getElementById('canvas');
+    const canvasRect = canvas.getBoundingClientRect();
     
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
@@ -337,6 +395,9 @@ function handleCanvasItemMouseDown(e) {
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('touchmove', handleTouchMove);
         document.removeEventListener('touchend', handleMouseUp);
+        if (draggedElement) {
+            updateItemRelativePosition(draggedElement);
+        }
     }
     
     function handleTouchMove(moveEvent) {
@@ -768,6 +829,7 @@ function setupCanvasSizeListener() {
             if (canvas) {
                 canvas.style.width = size;
                 canvas.style.height = size;
+                applyAllItemPositions();
             }
         });
 
@@ -776,13 +838,11 @@ function setupCanvasSizeListener() {
         if (canvas) {
             canvas.style.width = initial;
             canvas.style.height = initial;
+            applyAllItemPositions();
         }
     } else {
-        // No select in UI (settings removed) - ensure canvas has sensible default
-        if (canvas) {
-            canvas.style.width = sizes['medium'];
-            canvas.style.height = sizes['medium'];
-        }
+        // No select in UI (settings removed) - keep canvas responsive
+        applyAllItemPositions();
     }
 }
 
@@ -906,7 +966,7 @@ function loadLayout(id) {
     if (sizeSelect) sizeSelect.value = layout.size;
     
     const sizes = { 'small': '400px', 'medium': '600px', 'large': '800px' };
-    if (canvas) {
+    if (canvas && sizeSelect) {
         canvas.style.width = sizes[layout.size] || sizes['medium'];
         canvas.style.height = sizes[layout.size] || sizes['medium'];
     }
@@ -958,9 +1018,11 @@ function loadLayout(id) {
         });
         
         canvas.appendChild(item);
+        updateItemRelativePosition(item);
     });
     
     canvas.classList.add('has-items');
+    applyAllItemPositions();
 }
 
 // Delete a saved layout

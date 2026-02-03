@@ -566,15 +566,6 @@ header p {
         display: none;
     }
 
-    /* Debug: canvas tint to verify media query triggers */
-    .canvas {
-        background: #f3f7ff;
-        transform: scale(0.85);
-        transform-origin: top left;
-        width: 117.6%;
-        height: 117.6%;
-    }
-
     .canvas-item {
         width: 80px;
         height: 110px;
@@ -631,15 +622,6 @@ header p {
 
     .canvas {
         min-height: 300px;
-    }
-
-    /* Debug: canvas tint to verify media query triggers */
-    .canvas {
-        background: #eef9f1;
-        transform: scale(0.6);
-        transform-origin: top left;
-        width: 166.7%;
-        height: 166.7%;
     }
 
     .canvas-buttons {
@@ -703,6 +685,10 @@ header p {
         font-size: 1.6em;
     }
 
+    .canvas-hint {
+        font-size: 0.95em;
+    }
+}
 
 @media (max-width: 480px) {
     .canvas-item {
@@ -726,10 +712,6 @@ header p {
     .canvas-item-title {
         font-size: 0.65em;
         padding: 2px;
-    }
-}
-    .canvas-hint {
-        font-size: 0.95em;
     }
 }
 
