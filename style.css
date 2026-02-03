@@ -569,6 +569,10 @@ header p {
     /* Debug: canvas tint to verify media query triggers */
     .canvas {
         background: #f3f7ff;
+        transform: scale(0.85);
+        transform-origin: top left;
+        width: 117.6%;
+        height: 117.6%;
     }
 
     .canvas-item {
@@ -632,6 +636,10 @@ header p {
     /* Debug: canvas tint to verify media query triggers */
     .canvas {
         background: #eef9f1;
+        transform: scale(0.6);
+        transform-origin: top left;
+        width: 166.7%;
+        height: 166.7%;
     }
 
     .canvas-buttons {
