@@ -326,10 +326,10 @@ header p {
     border: 2px solid transparent;
     display: flex;
     flex-direction: column;
-    width: clamp(60px, 10vw, 90px);
-    height: clamp(90px, 13vw, 120px);
-    min-width: 80px;
-    min-height: 100px;
+    width: clamp(50px, 8vw, 90px);
+    height: clamp(75px, 11vw, 120px);
+    min-width: 50px;
+    min-height: 75px;
 }
 
 .canvas-item:hover {
@@ -395,12 +395,12 @@ header p {
     height: 100%;
     object-fit: contain;
     pointer-events: none;
-    max-width: clamp(36px, 6vw, 60px);
-    max-height: clamp(36px, 6vw, 60px);
+    max-width: clamp(30px, 5vw, 60px);
+    max-height: clamp(30px, 5vw, 60px);
 }
 
 .canvas-item .emoji {
-    font-size: clamp(1.7em, 3.2vw, 2.5em);
+    font-size: clamp(1.4em, 2.8vw, 2.5em);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -668,56 +668,56 @@ header p {
     }
 
     .canvas-item {
-        width: 70px;
-        height: 100px;
-        min-width: 60px;
-        min-height: 90px;
-        padding: 5px;
+        width: 55px;
+        height: 80px;
+        min-width: 50px;
+        min-height: 75px;
+        padding: 4px;
     }
 
     .canvas-item-label {
-        font-size: 0.7em;
-        max-height: 25px;
-    }
-
-    .canvas-item-title {
-        font-size: 0.75em;
-        padding: 4px;
-    }
-
-    .canvas-item img,
-    .canvas-item .emoji {
-        max-width: 42px;
-        max-height: 42px;
-    }
-
-    .canvas-item .emoji {
-        font-size: 1.9em;
-    }
-
-
-@media (max-width: 480px) {
-    .canvas-item {
-        width: 60px;
-        height: 90px;
-        min-width: 54px;
-        min-height: 80px;
-        padding: 4px;
-    }
-
-    .canvas-item img,
-    .canvas-item .emoji {
-        max-width: 36px;
-        max-height: 36px;
-    }
-
-    .canvas-item .emoji {
-        font-size: 1.7em;
+        font-size: 0.65em;
+        max-height: 20px;
     }
 
     .canvas-item-title {
         font-size: 0.7em;
         padding: 3px;
+    }
+
+    .canvas-item img,
+    .canvas-item .emoji {
+        max-width: 35px;
+        max-height: 35px;
+    }
+
+    .canvas-item .emoji {
+        font-size: 1.6em;
+    }
+
+
+@media (max-width: 480px) {
+    .canvas-item {
+        width: 48px;
+        height: 70px;
+        min-width: 45px;
+        min-height: 65px;
+        padding: 3px;
+    }
+
+    .canvas-item img,
+    .canvas-item .emoji {
+        max-width: 30px;
+        max-height: 30px;
+    }
+
+    .canvas-item .emoji {
+        font-size: 1.4em;
+    }
+
+    .canvas-item-title {
+        font-size: 0.65em;
+        padding: 2px;
     }
 }
     .canvas-hint {
