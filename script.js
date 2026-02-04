@@ -734,7 +734,6 @@ function addToCanvas(content, x, y, itemName = '', type = '') {
     // Store initial size in dataset for saving
     item.dataset.savedWidth = item.offsetWidth;
     item.dataset.savedHeight = item.offsetHeight;
-    addRecentItem(content, itemName, resolvedType);
 }
 
 // Handle mouse down on canvas item for dragging
@@ -1870,7 +1869,6 @@ function addToSlides(content, itemName = '', type = 'emoji') {
     currentSlideIndex = slides.length - 1;
     updateSlidesDisplay();
     selectSlide(currentSlideIndex);
-    addRecentItem(content, itemName, type);
     
     // Auto-show slides view
     const slidesArea = document.getElementById('slidesArea');
