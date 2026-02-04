@@ -326,8 +326,8 @@ header p {
     border: 2px solid transparent;
     display: flex;
     flex-direction: column;
-    width: clamp(40px, 8vw, 100px);
-    height: clamp(60px, 12vw, 140px);
+    width: clamp(35px, 7vw, 100px);
+    height: clamp(50px, 10vw, 140px);
 }
 
 .canvas-item:hover {
@@ -393,12 +393,12 @@ header p {
     height: 100%;
     object-fit: contain;
     pointer-events: none;
-    max-width: clamp(20px, 4vw, 70px);
-    max-height: clamp(20px, 4vw, 70px);
+    max-width: clamp(15px, 3.5vw, 70px);
+    max-height: clamp(15px, 3.5vw, 70px);
 }
 
 .canvas-item .emoji {
-    font-size: clamp(1.2em, 2.5vw, 3em);
+    font-size: clamp(1em, 2vw, 3em);
     display: flex;
     align-items: center;
     justify-content: center;
