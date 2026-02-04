@@ -1667,6 +1667,9 @@ header p {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 4px 6px;
+    border-radius: 6px;
 }
 
 .day-item-remove {
