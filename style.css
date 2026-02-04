@@ -398,17 +398,19 @@ header p {
         position: sticky;
         bottom: 0;
         background: white;
-        padding: 12px 0;
-        margin: 16px 0 -25px;
+        padding: 16px 16px 20px;
+        margin: 16px 0 0;
         border-top: 2px solid #e8eaf6;
         box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
         z-index: 100;
+        border-radius: 0 0 20px 20px;
     }
 
     .canvas-area,
     .slides-area,
     .weekly-area {
-        padding-bottom: 80px;
+        padding-bottom: 0;
+        overflow: hidden;
     }
 }
 
