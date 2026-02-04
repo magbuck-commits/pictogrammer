@@ -383,6 +383,12 @@ header p {
     border-bottom: 2px solid #f0f0f0;
 }
 
+.canvas-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
 .canvas-center-actions {
     display: flex;
     justify-content: center;

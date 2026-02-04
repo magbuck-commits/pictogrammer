@@ -59,12 +59,6 @@
             <main class="canvas-area">
                 <div class="canvas-header">
                     <h2>Canvas</h2>
-                    <div class="canvas-buttons">
-                        <button onclick="saveLayout()">💾 Gem Layout</button>
-                        <button id="snapToggleBtn" onclick="toggleSnapGrid()">🧲 Snap: Fra</button>
-                        <button onclick="downloadAsImage()">⬇️ Download</button>
-                        <button onclick="toggleSavedLayouts()">📂 Vis Gemte Layouts</button>
-                    </div>
                 </div>
                 <div class="canvas-center-actions">
                     <button class="canvas-clear-btn" onclick="clearCanvas()">🗑️ Ryd Canvas</button>
@@ -84,6 +78,14 @@
 
                 <div class="canvas" id="canvas">
                     <p class="canvas-hint">Drag pictogrammer her...</p>
+                </div>
+                <div class="canvas-footer">
+                    <div class="canvas-buttons">
+                        <button onclick="saveLayout()">💾 Gem Layout</button>
+                        <button id="snapToggleBtn" onclick="toggleSnapGrid()">🧲 Snap: Fra</button>
+                        <button onclick="downloadAsImage()">⬇️ Download</button>
+                        <button onclick="toggleSavedLayouts()">📂 Vis Gemte Layouts</button>
+                    </div>
                 </div>
             </main>
 
