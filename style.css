@@ -326,10 +326,8 @@ header p {
     border: 2px solid transparent;
     display: flex;
     flex-direction: column;
-    width: clamp(50px, 8vw, 90px);
-    height: clamp(75px, 11vw, 120px);
-    min-width: 50px;
-    min-height: 75px;
+    width: clamp(40px, 8vw, 100px);
+    height: clamp(60px, 12vw, 140px);
 }
 
 .canvas-item:hover {
@@ -395,12 +393,12 @@ header p {
     height: 100%;
     object-fit: contain;
     pointer-events: none;
-    max-width: clamp(30px, 5vw, 60px);
-    max-height: clamp(30px, 5vw, 60px);
+    max-width: clamp(20px, 4vw, 70px);
+    max-height: clamp(20px, 4vw, 70px);
 }
 
 .canvas-item .emoji {
-    font-size: clamp(1.4em, 2.8vw, 2.5em);
+    font-size: clamp(1.2em, 2.5vw, 3em);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -567,10 +565,8 @@ header p {
     }
 
     .canvas-item {
-        width: 80px;
-        height: 110px;
-        min-width: 70px;
-        min-height: 100px;
+        width: 70px;
+        height: 100px;
         padding: 6px;
     }
 
@@ -660,8 +656,6 @@ header p {
     .canvas-item {
         width: 55px;
         height: 80px;
-        min-width: 50px;
-        min-height: 75px;
         padding: 4px;
     }
 
@@ -692,10 +686,8 @@ header p {
 
 @media (max-width: 480px) {
     .canvas-item {
-        width: 48px;
-        height: 70px;
-        min-width: 45px;
-        min-height: 65px;
+        width: 40px;
+        height: 60px;
         padding: 3px;
     }
 
