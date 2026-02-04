@@ -601,7 +601,7 @@ header p {
     font-size: 0.6em;
     font-weight: 700;
     color: #fff;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.55);
     border: none;
     border-radius: 3px;
     cursor: pointer;
@@ -661,7 +661,7 @@ header p {
     font-size: 0.85em;
     font-weight: 500;
     color: #333;
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.08);
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 0 0 6px 6px;
     cursor: pointer;
