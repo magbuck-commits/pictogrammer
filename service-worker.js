@@ -1,5 +1,5 @@
 // Service Worker for Pictogrammer PWA
-const CACHE_NAME = 'pictogrammer-v12';
+const CACHE_NAME = 'pictogrammer-v39';
 const urlsToCache = [
   './',
   './script.js',

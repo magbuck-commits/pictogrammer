@@ -82,6 +82,13 @@ let uploadedLibraryItems = [];
 let deferredInstallPrompt = null;
 let slides = [];
 let currentSlideIndex = -1;
+let pendingConfirmAction = null;
+let recentItems = [];
+const RECENT_LIMIT = 8;
+let pendingNameResolve = null;
+let slidesListenersSetup = false;
+let snapToGrid = false;
+const GRID_SIZE = 10;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -94,7 +101,113 @@ document.addEventListener('DOMContentLoaded', () => {
     setupCanvasResizeHandler();
     loadSavedLayouts();
     setupInstallButton();
+    setupConfirmModal();
+    setupNameModal();
+    loadRecentItems();
+    renderRecentItems();
+    setSnapButtonState();
+    setupTemplateSelects();
 });
+
+function setupTemplateSelects() {
+    document.querySelectorAll('.template-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+            setView(e.target.value);
+        });
+    });
+    updateTemplateSelects('canvas');
+}
+
+function updateTemplateSelects(value) {
+    document.querySelectorAll('.template-select').forEach(select => {
+        select.value = value;
+    });
+}
+
+function setupConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    const okBtn = document.getElementById('confirmOkBtn');
+    const backdrop = modal ? modal.querySelector('.confirm-modal-backdrop') : null;
+
+    if (!modal || !cancelBtn || !okBtn || !backdrop) return;
+
+    cancelBtn.addEventListener('click', () => hideConfirmModal());
+    backdrop.addEventListener('click', () => hideConfirmModal());
+    okBtn.addEventListener('click', () => {
+        const action = pendingConfirmAction;
+        hideConfirmModal();
+        if (action) action();
+    });
+}
+
+function showConfirmModal(message, onConfirm, title = 'Er du sikker?') {
+    const modal = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const messageEl = document.getElementById('confirmModalMessage');
+    if (!modal || !titleEl || !messageEl) return;
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    pendingConfirmAction = onConfirm;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    pendingConfirmAction = null;
+}
+
+function setupNameModal() {
+    const modal = document.getElementById('nameModal');
+    const cancelBtn = document.getElementById('nameCancelBtn');
+    const okBtn = document.getElementById('nameOkBtn');
+    const backdrop = modal ? modal.querySelector('.confirm-modal-backdrop') : null;
+    const input = document.getElementById('layoutNameInput');
+
+    if (!modal || !cancelBtn || !okBtn || !backdrop || !input) return;
+
+    cancelBtn.addEventListener('click', () => finishNameModal(null));
+    backdrop.addEventListener('click', () => finishNameModal(null));
+    okBtn.addEventListener('click', () => finishNameModal(input.value));
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            finishNameModal(input.value);
+        }
+    });
+}
+
+function showNameModal(defaultValue) {
+    const modal = document.getElementById('nameModal');
+    const input = document.getElementById('layoutNameInput');
+    if (!modal || !input) return Promise.resolve(null);
+
+    input.value = defaultValue || '';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => input.focus(), 0);
+
+    return new Promise((resolve) => {
+        pendingNameResolve = resolve;
+    });
+}
+
+function finishNameModal(value) {
+    const modal = document.getElementById('nameModal');
+    const input = document.getElementById('layoutNameInput');
+    if (!modal || !input) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    const trimmed = (value || '').trim();
+    const resolve = pendingNameResolve;
+    pendingNameResolve = null;
+    if (resolve) resolve(trimmed || null);
+    input.value = '';
+}
 
 function getCanvasElement() {
     return document.getElementById('canvas');
@@ -143,6 +256,115 @@ function applyAllItemPositions() {
     document.querySelectorAll('.canvas-item').forEach(item => {
         applyItemRelativePosition(item);
     });
+}
+
+function normalizeSizeValue(value) {
+    if (value == null) return '';
+    if (typeof value === 'number') return value + 'px';
+    if (typeof value === 'string' && value.trim() !== '') return value;
+    return '';
+}
+
+function parseSizeValue(value) {
+    if (value == null) return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+function snapValue(value, gridSize) {
+    return Math.round(value / gridSize) * gridSize;
+}
+
+function setSnapButtonState() {
+    const btn = document.getElementById('snapToggleBtn');
+    if (!btn) return;
+    btn.textContent = snapToGrid ? '🧲 Snap: Til' : '🧲 Snap: Fra';
+}
+
+function toggleSnapGrid() {
+    snapToGrid = !snapToGrid;
+    setSnapButtonState();
+}
+function updateItemContentScale(item) {
+    if (!item) return;
+    const emoji = item.querySelector('.emoji');
+    if (!emoji) return;
+    const size = Math.min(item.clientWidth, item.clientHeight) * 0.6;
+    const clamped = Math.max(12, Math.floor(size));
+    emoji.style.fontSize = clamped + 'px';
+}
+
+function addResizeHandle(item) {
+    if (!item || item.querySelector('.resize-handle')) return;
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.addEventListener('mousedown', startResize);
+    handle.addEventListener('touchstart', startResize, { passive: false });
+    item.appendChild(handle);
+}
+
+function getPointerPosition(e) {
+    if (e.touches && e.touches[0]) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+}
+
+function startResize(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const handle = e.currentTarget;
+    const item = handle ? handle.parentElement : null;
+    const canvas = document.getElementById('canvas');
+    if (!item || !canvas) return;
+    if (item.dataset.locked === 'true') return;
+
+    const startPos = getPointerPosition(e);
+    const startWidth = item.offsetWidth;
+    const startHeight = item.offsetHeight;
+    const canvasRect = canvas.getBoundingClientRect();
+    const itemLeft = parseFloat(item.style.left) || 0;
+    const itemTop = parseFloat(item.style.top) || 0;
+    const maxWidth = Math.max(40, canvasRect.width - itemLeft);
+    const maxHeight = Math.max(50, canvasRect.height - itemTop);
+
+    function onMove(ev) {
+        if (ev.cancelable) ev.preventDefault();
+        const pos = getPointerPosition(ev);
+        const dx = pos.x - startPos.x;
+        const dy = pos.y - startPos.y;
+        let newWidth = Math.max(40, Math.min(maxWidth, startWidth + dx));
+        let newHeight = Math.max(50, Math.min(maxHeight, startHeight + dy));
+        if (snapToGrid) {
+            newWidth = snapValue(newWidth, GRID_SIZE);
+            newHeight = snapValue(newHeight, GRID_SIZE);
+            newWidth = Math.max(40, Math.min(maxWidth, newWidth));
+            newHeight = Math.max(50, Math.min(maxHeight, newHeight));
+        }
+        item.style.width = newWidth + 'px';
+        item.style.height = newHeight + 'px';
+        item.dataset.savedWidth = newWidth;
+        item.dataset.savedHeight = newHeight;
+        updateItemContentScale(item);
+    }
+
+    function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        updateItemRelativePosition(item);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
 }
 
 function setupCanvasResizeHandler() {
@@ -229,12 +451,24 @@ function initializeLibrary() {
             addToSlides(item.emoji, libItem.dataset.displayName || item.name);
         });
         libItem.appendChild(addToSlidesBtn);
+
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'library-item-delete';
+        deleteBtn.textContent = '-';
+        deleteBtn.title = 'Slet pictogrammet';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeLibraryItemElement(libItem);
+        });
+        libItem.appendChild(deleteBtn);
         
         libItem.title = item.name + ' (dobbeltklik for at tilføje)'
         libItem.draggable = true;
         libItem.dataset.name = item.name;
         libItem.dataset.displayName = item.name;
         libItem.dataset.emoji = item.emoji;
+        libItem.dataset.itemType = 'emoji';
         
         libItem.addEventListener('dragstart', handleLibraryDragStart);
         libItem.addEventListener('dragend', handleDragEnd);
@@ -259,9 +493,13 @@ function handleLibraryDragStart(e) {
     // Get the actual emoji or image from the element
     const emojiElement = e.target.dataset.emoji || e.target.textContent;
     const displayName = e.target.dataset.displayName || e.target.dataset.name || '';
+    const itemType = e.target.dataset.itemType || 'emoji';
+    
+    console.log('Drag start:', { emojiElement, displayName, itemType });
     
     e.dataTransfer.setData('text/plain', emojiElement);
     e.dataTransfer.setData('itemName', displayName);
+    e.dataTransfer.setData('itemType', itemType);
 }
 
 // Handle drag end
@@ -310,6 +548,115 @@ function setupCanvasListeners() {
     });
 }
 
+function setupSlidesListeners() {
+    if (slidesListenersSetup) {
+        console.log('Slides listeners already set up, skipping');
+        return;
+    }
+    
+    const slidesDisplay = document.getElementById('slidesDisplayContent');
+    const slidesArea = document.querySelector('.slides-display');
+    const slidesThumbs = document.getElementById('slidesThumbs');
+    const slidesThumbsContainer = document.querySelector('.slides-thumbs-container');
+    
+    console.log('Setting up slides listeners. slidesArea:', slidesArea, 'slidesDisplay:', slidesDisplay);
+    
+    // Setup drop on the thumbnails strip
+    if (slidesThumbs && slidesThumbsContainer) {
+        slidesThumbsContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const effect = e.dataTransfer.effectAllowed || '';
+            const isMove = effect.includes('move');
+            e.dataTransfer.dropEffect = isMove ? 'move' : 'copy';
+            if (!isMove) {
+                slidesThumbsContainer.classList.add('drag-over');
+            }
+        });
+
+        slidesThumbsContainer.addEventListener('dragleave', (e) => {
+            if (e.target === slidesThumbsContainer) {
+                slidesThumbsContainer.classList.remove('drag-over');
+            }
+        });
+
+        slidesThumbsContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slidesThumbsContainer.classList.remove('drag-over');
+
+            const effect = e.dataTransfer.effectAllowed || '';
+            const isMove = effect.includes('move');
+            if (isMove) return;
+
+            const emoji = e.dataTransfer.getData('text/plain');
+            const itemName = e.dataTransfer.getData('itemName') || '';
+            const itemType = e.dataTransfer.getData('itemType') || 'emoji';
+
+            if (emoji) {
+                addToSlides(emoji, itemName, itemType);
+            }
+        });
+    }
+
+    // Setup drop on the entire slides display area
+    if (slidesArea) {
+        slidesArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            slidesArea.classList.add('drag-over');
+            e.dataTransfer.dropEffect = 'copy';
+            console.log('Slides dragover');
+        });
+        
+        slidesArea.addEventListener('dragleave', (e) => {
+            // Only remove if leaving the slides-display itself
+            if (e.target === slidesArea) {
+                slidesArea.classList.remove('drag-over');
+            }
+        });
+        
+        slidesArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slidesArea.classList.remove('drag-over');
+            
+            const emoji = e.dataTransfer.getData('text/plain');
+            const itemName = e.dataTransfer.getData('itemName') || '';
+            const itemType = e.dataTransfer.getData('itemType') || 'emoji';
+            
+            console.log('Slides drop:', { emoji, itemName, itemType });
+            
+            if (emoji) {
+                addToSlides(emoji, itemName, itemType);
+            }
+        });
+        
+        slidesListenersSetup = true;
+        console.log('Slides listeners successfully set up');
+    } else {
+        console.warn('Slides area not found!');
+    }
+    
+    // Also setup on content area for better coverage
+    if (slidesDisplay) {
+        slidesDisplay.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        slidesDisplay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const emoji = e.dataTransfer.getData('text/plain');
+            const itemName = e.dataTransfer.getData('itemName') || '';
+            const itemType = e.dataTransfer.getData('itemType') || 'emoji';
+            
+            console.log('Slides display drop:', { emoji, itemName, itemType });
+            
+            if (emoji) {
+                addToSlides(emoji, itemName, itemType);
+            }
+        });
+    }
+}
+
 // Quick add to canvas via double-click
 function addToCanvasQuick(content, itemName = '', type = 'emoji') {
     const canvas = document.getElementById('canvas');
@@ -323,10 +670,11 @@ function addToCanvasQuick(content, itemName = '', type = 'emoji') {
 }
 
 // Add item to canvas
-function addToCanvas(content, x, y, itemName = '') {
+function addToCanvas(content, x, y, itemName = '', type = '') {
     const canvas = document.getElementById('canvas');
     const item = document.createElement('div');
     item.className = 'canvas-item';
+    item.dataset.locked = 'false';
     
     // Remove canvas hint when first item is added
     canvas.classList.add('has-items');
@@ -335,15 +683,14 @@ function addToCanvas(content, x, y, itemName = '') {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'canvas-item-content';
     
+    const resolvedType = type || inferRecentType(content);
+
     // Determine if it's an image (from upload) or emoji
-    if (content.startsWith('data:') || content.startsWith('blob:')) {
+    if (resolvedType === 'image') {
         const img = document.createElement('img');
         img.src = content;
-        contentDiv.appendChild(img);
-    } else if (content.includes('.')) {
-        // Filename from upload
-        const img = document.createElement('img');
-        img.src = content;
+        img.style.width = '100%';
+        img.style.height = '100%';
         contentDiv.appendChild(img);
     } else {
         // Emoji
@@ -367,6 +714,8 @@ function addToCanvas(content, x, y, itemName = '') {
     });
     
     item.appendChild(titleDiv);
+
+    addResizeHandle(item);
     
     item.style.left = (x - 40) + 'px';
     item.style.top = (y - 40) + 'px';
@@ -381,6 +730,11 @@ function addToCanvas(content, x, y, itemName = '') {
     
     canvas.appendChild(item);
     updateItemRelativePosition(item);
+    updateItemContentScale(item);
+    // Store initial size in dataset for saving
+    item.dataset.savedWidth = item.offsetWidth;
+    item.dataset.savedHeight = item.offsetHeight;
+    addRecentItem(content, itemName, resolvedType);
 }
 
 // Handle mouse down on canvas item for dragging
@@ -390,6 +744,9 @@ function handleCanvasItemMouseDown(e) {
     if (!isTouch && e.button !== 0) return; // Only left click for mouse
     
     draggedElement = e.currentTarget;
+    if (draggedElement && draggedElement.dataset.locked === 'true') {
+        return;
+    }
     selectItem(draggedElement);
     
     const rect = draggedElement.getBoundingClientRect();
@@ -401,15 +758,47 @@ function handleCanvasItemMouseDown(e) {
     const offsetX = clientX - rect.left;
     const offsetY = clientY - rect.top;
     
-    function handleMouseMove(moveEvent) {
-        const x = moveEvent.clientX - canvasRect.left - offsetX;
-        const y = moveEvent.clientY - canvasRect.top - offsetY;
+    let autoScrollInterval = null;
+    
+    function autoScroll(mouseY) {
+        const scrollZone = 100; // pixels from edge to trigger scroll
+        const scrollSpeed = 10;
+        const viewportHeight = window.innerHeight;
         
-        draggedElement.style.left = Math.max(0, Math.min(x, canvasRect.width - rect.width)) + 'px';
-        draggedElement.style.top = Math.max(0, Math.min(y, canvasRect.height - rect.height)) + 'px';
+        if (mouseY < scrollZone) {
+            // Scroll up
+            window.scrollBy(0, -scrollSpeed);
+        } else if (mouseY > viewportHeight - scrollZone) {
+            // Scroll down
+            window.scrollBy(0, scrollSpeed);
+        }
+    }
+    
+    function handleMouseMove(moveEvent) {
+        const mouseY = moveEvent.clientY;
+        autoScroll(mouseY);
+        
+        let x = moveEvent.clientX - canvasRect.left - offsetX;
+        let y = moveEvent.clientY - canvasRect.top - offsetY;
+        
+        x = Math.max(0, Math.min(x, canvasRect.width - rect.width));
+        y = Math.max(0, Math.min(y, canvasRect.height - rect.height));
+        if (snapToGrid) {
+            x = snapValue(x, GRID_SIZE);
+            y = snapValue(y, GRID_SIZE);
+            x = Math.max(0, Math.min(x, canvasRect.width - rect.width));
+            y = Math.max(0, Math.min(y, canvasRect.height - rect.height));
+        }
+        
+        draggedElement.style.left = x + 'px';
+        draggedElement.style.top = y + 'px';
     }
     
     function handleMouseUp() {
+        if (autoScrollInterval) {
+            cancelAnimationFrame(autoScrollInterval);
+            autoScrollInterval = null;
+        }
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('touchmove', handleTouchMove);
@@ -420,11 +809,23 @@ function handleCanvasItemMouseDown(e) {
     }
     
     function handleTouchMove(moveEvent) {
-        const x = moveEvent.touches[0].clientX - canvasRect.left - offsetX;
-        const y = moveEvent.touches[0].clientY - canvasRect.top - offsetY;
+        const mouseY = moveEvent.touches[0].clientY;
+        autoScroll(mouseY);
         
-        draggedElement.style.left = Math.max(0, Math.min(x, canvasRect.width - rect.width)) + 'px';
-        draggedElement.style.top = Math.max(0, Math.min(y, canvasRect.height - rect.height)) + 'px';
+        let x = moveEvent.touches[0].clientX - canvasRect.left - offsetX;
+        let y = moveEvent.touches[0].clientY - canvasRect.top - offsetY;
+        
+        x = Math.max(0, Math.min(x, canvasRect.width - rect.width));
+        y = Math.max(0, Math.min(y, canvasRect.height - rect.height));
+        if (snapToGrid) {
+            x = snapValue(x, GRID_SIZE);
+            y = snapValue(y, GRID_SIZE);
+            x = Math.max(0, Math.min(x, canvasRect.width - rect.width));
+            y = Math.max(0, Math.min(y, canvasRect.height - rect.height));
+        }
+        
+        draggedElement.style.left = x + 'px';
+        draggedElement.style.top = y + 'px';
     }
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -509,6 +910,21 @@ function sendToBack() {
     }
 }
 
+function updateLockMenuLabel() {
+    const btn = document.getElementById('lockToggleBtn');
+    if (!btn || !selectedItem) return;
+    const isLocked = selectedItem.dataset.locked === 'true';
+    btn.textContent = isLocked ? 'Lås op' : 'Lås';
+}
+
+function toggleLockSelected() {
+    if (!selectedItem) return;
+    const isLocked = selectedItem.dataset.locked === 'true';
+    selectedItem.dataset.locked = isLocked ? 'false' : 'true';
+    selectedItem.classList.toggle('locked', !isLocked);
+    updateLockMenuLabel();
+}
+
 // Show context menu
 function showContextMenu(x, y, element) {
     selectItem(element);
@@ -516,6 +932,7 @@ function showContextMenu(x, y, element) {
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
     menu.classList.add('active');
+    updateLockMenuLabel();
     
     document.addEventListener('click', hideContextMenu, { once: true });
 }
@@ -600,6 +1017,81 @@ function setupSearchListener() {
     });
 }
 
+function loadRecentItems() {
+    try {
+        const stored = localStorage.getItem('recentPictograms');
+        recentItems = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(recentItems)) recentItems = [];
+    } catch (err) {
+        recentItems = [];
+    }
+}
+
+function saveRecentItems() {
+    localStorage.setItem('recentPictograms', JSON.stringify(recentItems));
+}
+
+function inferRecentType(content) {
+    if (content.startsWith('data:') || content.startsWith('blob:')) return 'image';
+    if (content.includes('.')) return 'image';
+    return 'emoji';
+}
+
+function addRecentItem(content, itemName = '', type = '') {
+    if (!content) return;
+    const resolvedType = type || inferRecentType(content);
+    recentItems = recentItems.filter(item => !(item.content === content && item.type === resolvedType));
+    recentItems.unshift({ content, name: itemName || '', type: resolvedType });
+    recentItems = recentItems.slice(0, RECENT_LIMIT);
+    saveRecentItems();
+    renderRecentItems();
+}
+
+function renderRecentItems() {
+    const container = document.getElementById('recentLibrary');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!recentItems.length) {
+        const empty = document.createElement('p');
+        empty.className = 'recent-empty';
+        empty.textContent = 'Ingen endnu';
+        container.appendChild(empty);
+        return;
+    }
+
+    recentItems.forEach(item => {
+        const recent = document.createElement('div');
+        recent.className = 'recent-item';
+        recent.title = 'Klik for at tilføje';
+        recent.draggable = true;
+
+        if (item.type === 'image') {
+            const img = document.createElement('img');
+            img.src = item.content;
+            recent.appendChild(img);
+        } else {
+            const emoji = document.createElement('div');
+            emoji.className = 'emoji';
+            emoji.textContent = item.content;
+            recent.appendChild(emoji);
+        }
+
+        recent.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/plain', item.content);
+            e.dataTransfer.setData('itemName', item.name || '');
+            e.dataTransfer.setData('itemType', item.type || 'emoji');
+        });
+
+        recent.addEventListener('click', () => {
+            addToCanvasQuick(item.content, item.name, item.type);
+        });
+
+        container.appendChild(recent);
+    });
+}
+
 // Setup upload listener
 function setupUploadListener() {
     const uploadInput = document.getElementById('uploadInput');
@@ -655,6 +1147,7 @@ function setupUploadListener() {
         uploadInput.value = '';
     });
 }
+
 
 // Add uploaded image to library
 function addUploadedItemToLibrary(dataUrl, fileName) {
@@ -719,13 +1212,14 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     item.dataset.name = cleanName;
     item.dataset.displayTitle = cleanName;
     item.dataset.dataUrl = dataUrl;
+    item.dataset.itemType = 'image';
     item.id = 'upload-' + Date.now();
     
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'library-item-delete';
-    deleteBtn.textContent = '✕';
-    deleteBtn.title = 'Slet billede';
+    deleteBtn.textContent = '-';
+    deleteBtn.title = 'Slet pictogrammet';
     deleteBtn.onclick = (e) => {
         e.stopPropagation();
         deleteUploadedItem(item.id);
@@ -758,6 +1252,8 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', dataUrl);
         e.dataTransfer.setData('itemName', item.dataset.displayTitle || cleanName);
+        e.dataTransfer.setData('itemType', 'image');
+        e.dataTransfer.setData('libraryItemId', item.id);
     });
     
     item.addEventListener('dblclick', (e) => {
@@ -828,19 +1324,25 @@ function editLibraryTitle(titleElement, item) {
     });
 }
 
+function removeLibraryItemElement(itemElement) {
+    if (!itemElement) return;
+    showConfirmModal('Vil du slette dette pictogram?', () => {
+        itemElement.remove();
+    });
+}
+
 // Delete uploaded item from library
 function deleteUploadedItem(itemId) {
-    if (!confirm('Er du sikker på at du vil slette dette billede?')) {
-        return;
-    }
-    
+    showConfirmModal('Vil du slette dette billede?', () => {
+        removeUploadedItemById(itemId);
+    });
+}
+
+function removeUploadedItemById(itemId) {
     const itemElement = document.getElementById(itemId);
     if (itemElement) {
         console.log('Deleting item:', itemId);
-        // Remove only this specific item, not parent
         itemElement.remove();
-        
-        // Remove from tracking array
         uploadedLibraryItems = uploadedLibraryItems.filter(item => item.id !== itemId);
         console.log('Remaining uploads:', uploadedLibraryItems.length);
     } else {
@@ -899,19 +1401,36 @@ function setupBgColorListener() {
 }
 
 // Save layout
-function saveLayout() {
+async function saveLayout() {
     const canvas = document.getElementById('canvas');
     const items = [];
     
     document.querySelectorAll('.canvas-item').forEach(item => {
         const titleElement = item.querySelector('.canvas-item-title');
+        const rect = item.getBoundingClientRect();
+        const savedWidth = parseFloat(item.dataset.savedWidth || '');
+        const savedHeight = parseFloat(item.dataset.savedHeight || '');
+        const finalWidth = Number.isFinite(savedWidth) ? savedWidth : rect.width;
+        const finalHeight = Number.isFinite(savedHeight) ? savedHeight : rect.height;
+        console.log('SAVING item:', {
+            title: titleElement?.textContent,
+            rectWidth: rect.width,
+            rectHeight: rect.height,
+            datasetWidth: item.dataset.savedWidth,
+            datasetHeight: item.dataset.savedHeight,
+            finalWidth,
+            finalHeight
+        });
         
         const itemData = {
             left: item.style.left,
             top: item.style.top,
             zIndex: item.style.zIndex || 'auto',
             title: titleElement?.textContent || 'Titel',
-            content: null
+            content: null,
+            width: finalWidth,
+            height: finalHeight,
+            locked: item.dataset.locked === 'true'
         };
         
         // Check if it has an image or emoji
@@ -926,10 +1445,24 @@ function saveLayout() {
         items.push(itemData);
     });
     
+    const defaultName = 'Layout ' + new Date().toLocaleString('da-DK');
+    const name = await showNameModal(defaultName);
+    if (!name) return;
+
+    const slidesSnapshot = slides.map(slide => ({
+        content: slide.content,
+        name: slide.name,
+        type: slide.type
+    }));
+
     const layout = {
         id: Date.now(),
-        name: prompt('Hvad skal layoutet hedde?') || 'Layout ' + new Date().toLocaleString('da-DK'),
+        name: name,
         items: items,
+        slides: slidesSnapshot,
+        currentSlideIndex: currentSlideIndex,
+        weekly: JSON.parse(JSON.stringify(weeklyData)),
+        highlightCurrentDay: highlightCurrentDay,
         bgColor: (document.getElementById('canvas') && document.getElementById('canvas').style.backgroundColor) || '#ffffff',
         size: (function() {
             const select = document.getElementById('canvasSize');
@@ -946,16 +1479,14 @@ function saveLayout() {
         })()
     };
     
-    if (layout.name) {
-        savedLayouts.push(layout);
-        localStorage.setItem('pictogramLayouts', JSON.stringify(savedLayouts));
-        console.log('Saved layout:', layout.name, layout.id);
-        // Ensure the saved layouts panel is visible so user can see it immediately
-        const panel = document.getElementById('savedLayoutsPanel');
-        if (panel) panel.style.display = 'block';
-        loadSavedLayouts();
-        alert('Layout gemt!');
-    }
+    savedLayouts.push(layout);
+    localStorage.setItem('pictogramLayouts', JSON.stringify(savedLayouts));
+    console.log('Saved layout:', layout.name, layout.id);
+    // Ensure the saved layouts panel is visible so user can see it immediately
+    const panel = document.getElementById('savedLayoutsPanel');
+    if (panel) panel.style.display = 'block';
+    loadSavedLayouts();
+    alert('Layout gemt!');
 }
 
 // Load saved layouts
@@ -1012,6 +1543,29 @@ function loadLayout(id) {
         item.style.left = itemData.left;
         item.style.top = itemData.top;
         item.style.zIndex = itemData.zIndex;
+        const sizeW = parseSizeValue(itemData.width);
+        const sizeH = parseSizeValue(itemData.height);
+        console.log('LOADING item:', {
+            title: itemData.title,
+            storedWidth: itemData.width,
+            storedHeight: itemData.height,
+            parsedW: sizeW,
+            parsedH: sizeH
+        });
+        if (sizeW) {
+            item.style.width = sizeW + 'px';
+            item.dataset.savedWidth = sizeW;
+        }
+        if (sizeH) {
+            item.style.height = sizeH + 'px';
+            item.dataset.savedHeight = sizeH;
+        }
+        if (itemData.locked) {
+            item.dataset.locked = 'true';
+            item.classList.add('locked');
+        } else {
+            item.dataset.locked = 'false';
+        }
         
         // Content holder
         const contentDiv = document.createElement('div');
@@ -1025,6 +1579,8 @@ function loadLayout(id) {
         } else if (itemData.type === 'image') {
             const img = document.createElement('img');
             img.src = itemData.content;
+            img.style.width = '100%';
+            img.style.height = '100%';
             contentDiv.appendChild(img);
         }
         
@@ -1042,9 +1598,11 @@ function loadLayout(id) {
         });
         
         item.appendChild(titleDiv);
+
+        addResizeHandle(item);
         
         // (no bottom label) -- only title on top
-        
+
         item.addEventListener('mousedown', handleCanvasItemMouseDown);
         item.addEventListener('touchstart', handleCanvasItemMouseDown);
         item.addEventListener('click', (e) => {
@@ -1054,7 +1612,65 @@ function loadLayout(id) {
         
         canvas.appendChild(item);
         updateItemRelativePosition(item);
+        updateItemContentScale(item);
+        console.log('LOADED item rendered:', {
+            title: itemData.title,
+            styleWidth: item.style.width,
+            styleHeight: item.style.height,
+            clientWidth: item.clientWidth,
+            clientHeight: item.clientHeight,
+            offsetWidth: item.offsetWidth,
+            offsetHeight: item.offsetHeight
+        });
     });
+
+    slides = Array.isArray(layout.slides)
+        ? layout.slides.map(slide => ({
+            content: slide.content,
+            name: slide.name,
+            type: slide.type
+        }))
+        : [];
+    const storedIndex = Number.isFinite(layout.currentSlideIndex)
+        ? layout.currentSlideIndex
+        : -1;
+    currentSlideIndex = slides.length > 0
+        ? Math.min(Math.max(storedIndex, 0), slides.length - 1)
+        : -1;
+    updateSlidesDisplay();
+    if (currentSlideIndex >= 0) {
+        selectSlide(currentSlideIndex);
+    } else {
+        renderSlidesEmptyState();
+        setSlidesControlsState();
+    }
+    
+    // Restore weekly data
+    if (layout.weekly) {
+        weeklyData = JSON.parse(JSON.stringify(layout.weekly));
+    } else {
+        weeklyData = {
+            monday: [],
+            tuesday: [],
+            wednesday: [],
+            thursday: [],
+            friday: [],
+            saturday: [],
+            sunday: []
+        };
+    }
+    
+    if (typeof layout.highlightCurrentDay === 'boolean') {
+        highlightCurrentDay = layout.highlightCurrentDay;
+    } else {
+        highlightCurrentDay = false;
+    }
+    
+    // Update highlight button if we're in weekly view
+    const highlightBtn = document.getElementById('highlightToggleBtn');
+    if (highlightBtn) {
+        highlightBtn.textContent = '✨ Fremhæv dag: ' + (highlightCurrentDay ? 'Til' : 'Fra');
+    }
     
     canvas.classList.add('has-items');
     applyAllItemPositions();
@@ -1130,20 +1746,116 @@ function downloadAsImage() {
     });
 }
 
+function drawImageContain(ctx, img, width, height) {
+    const ratio = Math.min(width / img.width, height / img.height);
+    const drawWidth = img.width * ratio;
+    const drawHeight = img.height * ratio;
+    const x = (width - drawWidth) / 2;
+    const y = (height - drawHeight) / 2;
+    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+}
+
+function renderSlideToDataUrl(slide, width, height) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = slide.bgColor || '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        if (slide.type === 'image') {
+            const img = new Image();
+            img.onload = () => {
+                drawImageContain(ctx, img, width, height);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => {
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.src = slide.content;
+        } else {
+            const size = Math.floor(Math.min(width, height) * 0.5);
+            ctx.fillStyle = '#000';
+            ctx.font = size + 'px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(slide.content, width / 2, height / 2);
+            resolve(canvas.toDataURL('image/png'));
+        }
+    });
+}
+
+async function downloadSlidesAsPdf() {
+    if (!slides || slides.length === 0) {
+        alert('Der er ingen slides at eksportere.');
+        return;
+    }
+
+    const jspdf = window.jspdf;
+    if (!jspdf || !jspdf.jsPDF) {
+        alert('PDF-biblioteket er ikke indlæst.');
+        return;
+    }
+
+    const width = 960;
+    const height = 540;
+    const pdf = new jspdf.jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [width, height]
+    });
+
+    for (let i = 0; i < slides.length; i += 1) {
+        const slide = slides[i];
+        const dataUrl = await renderSlideToDataUrl(slide, width, height);
+        if (i > 0) {
+            pdf.addPage([width, height], 'landscape');
+        }
+        pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
+    }
+
+    pdf.save('slides_' + new Date().getTime() + '.pdf');
+}
+
 // ===== SLIDES/TEMPLATE FUNCTIONALITY =====
+
+function setView(view) {
+    const canvasArea = document.querySelector('.canvas-area');
+    const slidesArea = document.getElementById('slidesArea');
+    const weeklyArea = document.getElementById('weeklyArea');
+
+    if (view === 'slides') {
+        canvasArea.style.display = 'none';
+        weeklyArea.style.display = 'none';
+        slidesArea.style.display = 'flex';
+        setupSlidesListeners();
+        updateTemplateSelects('slides');
+        return;
+    }
+
+    if (view === 'weekly') {
+        canvasArea.style.display = 'none';
+        slidesArea.style.display = 'none';
+        weeklyArea.style.display = 'flex';
+        renderWeeklyGrid();
+        setupWeeklyListeners();
+        updateTemplateSelects('weekly');
+        return;
+    }
+
+    slidesArea.style.display = 'none';
+    weeklyArea.style.display = 'none';
+    canvasArea.style.display = 'flex';
+    updateTemplateSelects('canvas');
+}
 
 // Toggle between Canvas and Slides view
 function toggleCanvasView() {
-    const canvasArea = document.querySelector('.canvas-area');
     const slidesArea = document.getElementById('slidesArea');
-    
-    if (slidesArea.style.display === 'none') {
-        canvasArea.style.display = 'none';
-        slidesArea.style.display = 'flex';
-    } else {
-        slidesArea.style.display = 'none';
-        canvasArea.style.display = 'flex';
-    }
+    const isHidden = slidesArea.style.display === 'none' || slidesArea.style.display === '';
+    setView(isHidden ? 'slides' : 'canvas');
 }
 
 // Add item to slides
@@ -1155,7 +1867,10 @@ function addToSlides(content, itemName = '', type = 'emoji') {
     };
     
     slides.push(slide);
+    currentSlideIndex = slides.length - 1;
     updateSlidesDisplay();
+    selectSlide(currentSlideIndex);
+    addRecentItem(content, itemName, type);
     
     // Auto-show slides view
     const slidesArea = document.getElementById('slidesArea');
@@ -1163,6 +1878,9 @@ function addToSlides(content, itemName = '', type = 'emoji') {
     if (slidesArea.style.display === 'none') {
         canvasArea.style.display = 'none';
         slidesArea.style.display = 'flex';
+        // Ensure slides listeners are set up
+        setupSlidesListeners();
+        updateTemplateSelects('slides');
     }
 }
 
@@ -1195,6 +1913,16 @@ function updateSlidesDisplay() {
         }
         
         thumb.appendChild(contentEl);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'slide-thumb-remove';
+        removeBtn.textContent = '-';
+        removeBtn.title = 'Fjern slide';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeSlideAt(index);
+        });
+        thumb.appendChild(removeBtn);
         
         // Click to select
         thumb.addEventListener('click', () => selectSlide(index));
@@ -1224,7 +1952,15 @@ function updateSlidesDisplay() {
             if (fromIndex !== toIndex) {
                 // Swap slides
                 [slides[fromIndex], slides[toIndex]] = [slides[toIndex], slides[fromIndex]];
+                if (currentSlideIndex === fromIndex) {
+                    currentSlideIndex = toIndex;
+                } else if (currentSlideIndex === toIndex) {
+                    currentSlideIndex = fromIndex;
+                }
                 updateSlidesDisplay();
+                if (currentSlideIndex >= 0) {
+                    selectSlide(currentSlideIndex);
+                }
             }
         });
         
@@ -1235,6 +1971,25 @@ function updateSlidesDisplay() {
         
         thumbsContainer.appendChild(thumb);
     });
+
+    setSlidesControlsState();
+}
+
+function setSlidesControlsState() {
+    const prevBtn = document.getElementById('slidesPrevBtn');
+    const nextBtn = document.getElementById('slidesNextBtn');
+    const removeBtn = document.getElementById('slidesRemoveBtn');
+    const hasSlides = slides.length > 0 && currentSlideIndex >= 0;
+
+    if (prevBtn) prevBtn.disabled = !hasSlides;
+    if (nextBtn) nextBtn.disabled = !hasSlides;
+    if (removeBtn) removeBtn.disabled = !hasSlides;
+}
+
+function renderSlidesEmptyState() {
+    const display = document.getElementById('slidesDisplayContent');
+    if (!display) return;
+    display.innerHTML = '<p style="color: #999; text-align: center; margin-top: 50px;">Ingen slides endnu</p>';
 }
 
 // Select slide and show large
@@ -1266,6 +2021,54 @@ function selectSlide(index) {
         emoji.textContent = slide.content;
         display.appendChild(emoji);
     }
+
+    setSlidesControlsState();
+}
+
+function showPrevSlide() {
+    if (slides.length === 0) return;
+    if (currentSlideIndex <= 0) {
+        selectSlide(slides.length - 1);
+    } else {
+        selectSlide(currentSlideIndex - 1);
+    }
+}
+
+function showNextSlide() {
+    if (slides.length === 0) return;
+    if (currentSlideIndex >= slides.length - 1) {
+        selectSlide(0);
+    } else {
+        selectSlide(currentSlideIndex + 1);
+    }
+}
+
+function removeSlideAt(index) {
+    if (index < 0 || index >= slides.length) return;
+
+    slides.splice(index, 1);
+
+    if (slides.length === 0) {
+        currentSlideIndex = -1;
+        updateSlidesDisplay();
+        renderSlidesEmptyState();
+        setSlidesControlsState();
+        return;
+    }
+
+    if (currentSlideIndex > index) {
+        currentSlideIndex -= 1;
+    } else if (currentSlideIndex === index) {
+        currentSlideIndex = Math.min(index, slides.length - 1);
+    }
+
+    updateSlidesDisplay();
+    selectSlide(currentSlideIndex);
+}
+
+function removeCurrentSlide() {
+    if (currentSlideIndex < 0) return;
+    removeSlideAt(currentSlideIndex);
 }
 
 // Clear all slides
@@ -1274,5 +2077,249 @@ function clearSlides() {
     slides = [];
     currentSlideIndex = -1;
     updateSlidesDisplay();
-    document.getElementById('slidesDisplayContent').innerHTML = '<p style="color: #999; text-align: center; margin-top: 50px;">Klik på en slide ovenfor</p>';
+    renderSlidesEmptyState();
+    setSlidesControlsState();
 }
+
+// ===== WEEKLY VIEW FUNCTIONALITY =====
+
+let weeklyData = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: [],
+    saturday: [],
+    sunday: []
+};
+
+let highlightCurrentDay = false;
+const weeklyDays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+const weeklyDaysKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+function getCurrentDayKey() {
+    const day = new Date().getDay();
+    // JavaScript getDay returns 0 for Sunday, 1 for Monday, etc.
+    // We want Monday to be index 0
+    const adjustedDay = day === 0 ? 6 : day - 1;
+    return weeklyDaysKey[adjustedDay];
+}
+
+function toggleWeeklyView() {
+    const weeklyArea = document.getElementById('weeklyArea');
+    const isHidden = weeklyArea.style.display === 'none' || weeklyArea.style.display === '';
+    setView(isHidden ? 'weekly' : 'canvas');
+}
+
+function renderWeeklyGrid() {
+    const weeklyGrid = document.getElementById('weeklyGrid');
+    weeklyGrid.innerHTML = '';
+    
+    const currentDayKey = getCurrentDayKey();
+    
+    weeklyDaysKey.forEach((dayKey, index) => {
+        const dayColumn = document.createElement('div');
+        dayColumn.className = 'day-column';
+        dayColumn.id = 'day-' + dayKey;
+        dayColumn.dataset.day = dayKey;
+        
+        if (dayKey === currentDayKey && highlightCurrentDay) {
+            dayColumn.classList.add('today');
+        }
+        
+        // Day header
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header';
+        dayHeader.textContent = weeklyDays[index];
+        dayColumn.appendChild(dayHeader);
+        
+        // Items container
+        const itemsContainer = document.createElement('div');
+        itemsContainer.className = 'day-items';
+        itemsContainer.dataset.day = dayKey;
+        
+        // Add existing items
+        if (weeklyData[dayKey] && weeklyData[dayKey].length > 0) {
+            weeklyData[dayKey].forEach((item, itemIndex) => {
+                const dayItem = createDayItem(item, dayKey, itemIndex);
+                itemsContainer.appendChild(dayItem);
+            });
+        }
+        
+        dayColumn.appendChild(itemsContainer);
+        weeklyGrid.appendChild(dayColumn);
+    });
+}
+
+function createDayItem(item, dayKey, itemIndex) {
+    const dayItem = document.createElement('div');
+    dayItem.className = 'day-item';
+    dayItem.draggable = true;
+    dayItem.dataset.day = dayKey;
+    dayItem.dataset.index = itemIndex;
+    
+    // For images, just show the image
+    if (item.type === 'image') {
+        const img = document.createElement('img');
+        img.src = item.content;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        dayItem.appendChild(img);
+    } else {
+        // For emojis/text items, only show the pictogram
+        const emoji = document.createElement('div');
+        emoji.className = 'day-item-emoji';
+        emoji.textContent = item.content;
+        dayItem.appendChild(emoji);
+    }
+
+    // Drag out to remove
+    dayItem.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('weeklyItem', JSON.stringify({
+            fromDay: dayKey,
+            index: itemIndex
+        }));
+    });
+
+    dayItem.addEventListener('dragend', (e) => {
+        if (e.dataTransfer.dropEffect === 'none') {
+            removeWeeklyItem(dayKey, itemIndex);
+        }
+    });
+
+    return dayItem;
+}
+
+function setupWeeklyListeners() {
+    // Drag over day items containers
+    document.querySelectorAll('.day-items').forEach(container => {
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            container.classList.add('drag-over');
+        });
+        
+        container.addEventListener('dragleave', (e) => {
+            if (e.target === container) {
+                container.classList.remove('drag-over');
+            }
+        });
+        
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            
+            const dayKey = container.dataset.day;
+            
+            const weeklyDataRaw = e.dataTransfer.getData('weeklyItem');
+            if (weeklyDataRaw) {
+                try {
+                    const moved = JSON.parse(weeklyDataRaw);
+                    const fromList = weeklyData[moved.fromDay] || [];
+                    const movedItem = fromList[moved.index];
+                    if (movedItem) {
+                        weeklyData[moved.fromDay].splice(moved.index, 1);
+                        addToWeeklyDay(dayKey, movedItem);
+                        return;
+                    }
+                } catch (err) {
+                    console.log('Could not parse weekly item data');
+                }
+            }
+
+            // Try to get data from dataTransfer
+            const content = e.dataTransfer.getData('text/plain');
+            const name = e.dataTransfer.getData('itemName');
+            const type = e.dataTransfer.getData('itemType') || 'emoji';
+            
+            if (content) {
+                const item = {
+                    content: content,
+                    name: name || 'Element',
+                    type: type
+                };
+                addToWeeklyDay(dayKey, item);
+            } else {
+                // Try JSON format if plain text didn't work
+                const jsonData = e.dataTransfer.getData('application/json');
+                if (jsonData) {
+                    try {
+                        const item = JSON.parse(jsonData);
+                        addToWeeklyDay(dayKey, item);
+                    } catch (err) {
+                        console.log('Could not parse drag data');
+                    }
+                }
+            }
+        });
+    });
+}
+
+function addToWeeklyDay(dayKey, item) {
+    if (!weeklyData[dayKey]) {
+        weeklyData[dayKey] = [];
+    }
+    
+    weeklyData[dayKey].push({
+        content: item.content,
+        name: item.type === 'image' ? '' : item.name,
+        type: item.type
+    });
+    
+    renderWeeklyGrid();
+    setupWeeklyListeners();
+}
+
+function removeWeeklyItem(dayKey, itemIndex) {
+    if (weeklyData[dayKey] && weeklyData[dayKey][itemIndex]) {
+        weeklyData[dayKey].splice(itemIndex, 1);
+        renderWeeklyGrid();
+        setupWeeklyListeners();
+    }
+}
+
+function toggleDayHighlight() {
+    highlightCurrentDay = !highlightCurrentDay;
+    const btn = document.getElementById('highlightToggleBtn');
+    if (btn) {
+        btn.textContent = '✨ Fremhæv dag: ' + (highlightCurrentDay ? 'Til' : 'Fra');
+    }
+    renderWeeklyGrid();
+    setupWeeklyListeners();
+}
+
+function clearWeeklyView() {
+    if (!confirm('Vil du slette alle elementer fra ugeoversigten?')) return;
+    
+    weeklyData = {
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+    };
+    
+    renderWeeklyGrid();
+    setupWeeklyListeners();
+}
+
+// Update save/load to include weekly data
+const originalSaveLayout = window.saveLayout;
+window.saveLayout = function() {
+    // Store weekly data in a way that can be serialized
+    const dataToSave = {
+        ...weeklyData
+    };
+    
+    // Call the original save layout function
+    const prevWeekly = weeklyData;
+    window.savingWeeklyData = dataToSave;
+    originalSaveLayout.call(this);
+    window.savingWeeklyData = null;
+};
+
+// We'll hook into the actual saveLayout function in the existing code

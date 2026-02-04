@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180'/><text x='50%' y='50%' font-size='80' fill='white' text-anchor='middle' dominant-baseline='middle'>📦</text></svg>">
     <link rel="manifest" href="manifest.json">
     <title>Pictogrammer - Drag & Drop Builder</title>
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
     <div class="container">
@@ -30,6 +30,13 @@
                 <div class="section search-section">
                     <h2>Søg</h2>
                     <input type="text" id="searchInput" placeholder="Søg i bibliotek...">
+                </div>
+
+                <div class="section recent-section">
+                    <h2>Brugt for nyligt</h2>
+                    <div class="recent-library" id="recentLibrary">
+                        <p class="recent-empty">Ingen endnu</p>
+                    </div>
                 </div>
 
                 <div class="scrollable-section">
@@ -54,11 +61,21 @@
                     <h2>Canvas</h2>
                     <div class="canvas-buttons">
                         <button onclick="saveLayout()">💾 Gem Layout</button>
-                        <button onclick="clearCanvas()">🗑️ Ryd Canvas</button>
+                        <button id="snapToggleBtn" onclick="toggleSnapGrid()">🧲 Snap: Fra</button>
                         <button onclick="downloadAsImage()">⬇️ Download</button>
                         <button onclick="toggleSavedLayouts()">📂 Vis Gemte Layouts</button>
-                        <button onclick="toggleCanvasView()">📊 Slides</button>
                     </div>
+                </div>
+                <div class="canvas-center-actions">
+                    <button class="canvas-clear-btn" onclick="clearCanvas()">🗑️ Ryd Canvas</button>
+                </div>
+                <div class="template-select-row">
+                    <span class="template-label">Templates</span>
+                    <select class="template-select" aria-label="Vælg template">
+                        <option value="canvas">🧱 Canvas</option>
+                        <option value="slides">📊 Slides</option>
+                        <option value="weekly">📅 Ugeoversigt</option>
+                    </select>
                 </div>
                 <div id="savedLayoutsPanel" class="saved-layouts-panel" style="display:none;">
                     <h3>Dine Gemte Layouts</h3>
@@ -75,7 +92,14 @@
                 <div class="slides-header">
                     <h2>📊 Slides</h2>
                     <div class="slides-buttons">
-                        <button onclick="toggleCanvasView()">← Tilbage til Canvas</button>
+                        <button onclick="saveLayout()">💾 Gem Layout</button>
+                        <button onclick="downloadSlidesAsPdf()">⬇️ Download layout</button>
+                        <span class="template-label">Templates</span>
+                        <select class="template-select" aria-label="Vælg template">
+                            <option value="canvas">🧱 Canvas</option>
+                            <option value="slides">📊 Slides</option>
+                            <option value="weekly">📅 Ugeoversigt</option>
+                        </select>
                         <button onclick="clearSlides()">🗑️ Ryd Slides</button>
                     </div>
                 </div>
@@ -90,6 +114,35 @@
                     <div id="slidesDisplayContent" class="slides-display-content">
                         <p style="color: #999; text-align: center; margin-top: 50px;">Klik på en slide ovenfor</p>
                     </div>
+                    <div class="slides-display-controls">
+                        <button id="slidesPrevBtn" onclick="showPrevSlide()" title="Forrige slide">&lt;</button>
+                        <button id="slidesNextBtn" onclick="showNextSlide()" title="Næste slide">&gt;</button>
+                        <button id="slidesRemoveBtn" onclick="removeCurrentSlide()" title="Fjern slide">-</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Weekly View -->
+            <main class="weekly-area" id="weeklyArea" style="display:none;">
+                <div class="weekly-header">
+                    <h2>📅 Ugeoversigt</h2>
+                    <div class="weekly-buttons">
+                        <button onclick="saveLayout()">💾 Gem Layout</button>
+                        <button id="highlightToggleBtn" onclick="toggleDayHighlight()">✨ Fremhæv dag: Fra</button>
+                        <span class="template-label">Templates</span>
+                        <select class="template-select" aria-label="Vælg template">
+                            <option value="canvas">🧱 Canvas</option>
+                            <option value="slides">📊 Slides</option>
+                            <option value="weekly">📅 Ugeoversigt</option>
+                        </select>
+                        <button onclick="clearWeeklyView()">🗑️ Ryd Uge</button>
+                    </div>
+                </div>
+                
+                <div class="weekly-container">
+                    <div class="weekly-grid" id="weeklyGrid">
+                        <!-- 7 columns for each day -->
+                    </div>
                 </div>
             </main>
 
@@ -101,9 +154,38 @@
     <div id="contextMenu" class="context-menu">
         <button onclick="bringToFront()">Bring til forgrunden</button>
         <button onclick="sendToBack()">Send til baggrund</button>
+        <button id="lockToggleBtn" onclick="toggleLockSelected()">Lås</button>
         <button onclick="deleteSelected()">Slet</button>
     </div>
 
+    <!-- Confirm modal -->
+    <div id="confirmModal" class="confirm-modal" aria-hidden="true">
+        <div class="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+            <h3 id="confirmModalTitle">Er du sikker?</h3>
+            <p id="confirmModalMessage">Vil du slette dette?</p>
+            <div class="confirm-modal-actions">
+                <button id="confirmCancelBtn" class="confirm-cancel">Nej</button>
+                <button id="confirmOkBtn" class="confirm-ok">Ja</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout name modal -->
+    <div id="nameModal" class="confirm-modal" aria-hidden="true">
+        <div class="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-content" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+            <h3 id="nameModalTitle">Navngiv layout</h3>
+            <p>Indtast et navn til dit layout</p>
+            <input id="layoutNameInput" class="name-modal-input" type="text" placeholder="Layout navn">
+            <div class="confirm-modal-actions">
+                <button id="nameCancelBtn" class="confirm-cancel">Nej</button>
+                <button id="nameOkBtn" class="confirm-ok">Gem</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
     <script>
         // Register service worker
