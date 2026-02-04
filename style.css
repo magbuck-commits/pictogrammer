@@ -1012,11 +1012,16 @@ header p {
     }
 
     .library {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .library-item {
-        font-size: 1.8em;
+        font-size: 1.9em;
+        height: 80px;
+    }
+
+    .library-item-title {
+        font-size: 0.6em;
     }
 
     .section {
@@ -1052,6 +1057,15 @@ header p {
         flex: 1 1 160px;
     }
 
+    .slides-display-content img {
+        max-width: 320px;
+        max-height: 320px;
+    }
+
+    .slides-display-content .emoji {
+        font-size: 6em;
+    }
+
     .weekly-area {
         padding: 16px;
     }
@@ -1074,6 +1088,19 @@ header p {
         min-height: 260px;
     }
 
+    .day-item {
+        padding: 12px 14px;
+    }
+
+    .day-item-emoji {
+        font-size: 1.8em;
+        min-width: 34px;
+    }
+
+    .day-item-name {
+        font-size: 1em;
+    }
+
     .canvas-item {
         width: 55px;
         height: 80px;
@@ -1092,12 +1119,12 @@ header p {
 
     .canvas-item img,
     .canvas-item .emoji {
-        max-width: 35px;
-        max-height: 35px;
+        max-width: 40px;
+        max-height: 40px;
     }
 
     .canvas-item .emoji {
-        font-size: 1.6em;
+        font-size: 1.8em;
     }
 
     .canvas-hint {
@@ -1114,6 +1141,11 @@ header p {
         grid-template-columns: repeat(2, 1fr);
     }
 
+    .library-item {
+        height: 72px;
+        font-size: 1.8em;
+    }
+
     .slides-buttons button,
     .weekly-buttons button {
         flex: 1 1 100%;
@@ -1121,6 +1153,15 @@ header p {
 
     .slides-display {
         min-height: 45vh;
+    }
+
+    .slides-display-content img {
+        max-width: 240px;
+        max-height: 240px;
+    }
+
+    .slides-display-content .emoji {
+        font-size: 4.8em;
     }
 
     .weekly-grid {
@@ -1131,6 +1172,19 @@ header p {
         min-height: 220px;
     }
 
+    .day-item {
+        padding: 12px 14px;
+    }
+
+    .day-item-emoji {
+        font-size: 1.6em;
+        min-width: 30px;
+    }
+
+    .day-item-name {
+        font-size: 0.95em;
+    }
+
     .canvas-item {
         width: 40px;
         height: 60px;
@@ -1139,12 +1193,12 @@ header p {
 
     .canvas-item img,
     .canvas-item .emoji {
-        max-width: 30px;
-        max-height: 30px;
+        max-width: 32px;
+        max-height: 32px;
     }
 
     .canvas-item .emoji {
-        font-size: 1.4em;
+        font-size: 1.5em;
     }
 
     .canvas-item-title {
