@@ -931,60 +931,84 @@ header p {
 
 @media (max-width: 768px) {
     .container {
-        padding: 10px;
+        padding: 12px;
     }
 
     header {
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: 18px;
+        margin-bottom: 12px;
     }
 
     header h1 {
-        font-size: 1.8em;
+        font-size: 2em;
     }
 
     header p {
-        font-size: 0.95em;
+        font-size: 1em;
     }
 
     .main-content {
         grid-template-columns: 1fr;
         height: auto;
-        gap: 15px;
+        gap: 16px;
     }
 
     .sidebar {
         display: block;
-        padding: 15px;
-        max-height: 35vh;
+        padding: 16px;
+        max-height: 42vh;
         overflow-y: auto;
     }
 
     .canvas-area {
-        padding: 15px;
+        padding: 16px;
     }
 
     .canvas {
-        min-height: 300px;
+        min-height: 320px;
+    }
+
+    .canvas-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
 
     .canvas-buttons {
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        width: 100%;
     }
 
     .canvas-buttons button {
-        flex: 1;
-        font-size: 0.85em;
-        padding: 8px 12px;
+        width: 100%;
+        font-size: 0.95em;
+        padding: 12px 14px;
+    }
+
+    .canvas-center-actions {
+        justify-content: stretch;
+    }
+
+    .canvas-clear-btn {
+        width: 100%;
+    }
+
+    .template-select-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .template-label {
+        align-self: flex-start;
     }
 
     .template-select {
-        flex: 1;
-        font-size: 0.85em;
-        padding: 8px 34px 8px 12px;
-        background-position: calc(100% - 16px) 55%, calc(100% - 10px) 55%, 100% 0;
-        background-size: 5px 5px, 5px 5px, 2.2em 100%;
+        width: 100%;
+        font-size: 0.95em;
+        padding: 12px 38px 12px 14px;
+        background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%, 100% 0;
+        background-size: 6px 6px, 6px 6px, 2.4em 100%;
     }
 
     .library {
@@ -996,7 +1020,7 @@ header p {
     }
 
     .section {
-        margin-bottom: 15px;
+        margin-bottom: 14px;
     }
 
     .section h2 {
@@ -1006,6 +1030,48 @@ header p {
 
     input, select, label {
         font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .slides-area {
+        height: auto;
+        padding: 16px;
+    }
+
+    .slides-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .slides-buttons {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .slides-buttons button {
+        flex: 1 1 160px;
+    }
+
+    .weekly-area {
+        padding: 16px;
+    }
+
+    .weekly-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .weekly-buttons {
+        width: 100%;
+    }
+
+    .weekly-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .day-column {
+        min-height: 260px;
     }
 
     .canvas-item {
@@ -1040,6 +1106,31 @@ header p {
 }
 
 @media (max-width: 480px) {
+    .sidebar {
+        max-height: 50vh;
+    }
+
+    .library {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .slides-buttons button,
+    .weekly-buttons button {
+        flex: 1 1 100%;
+    }
+
+    .slides-display {
+        min-height: 45vh;
+    }
+
+    .weekly-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .day-column {
+        min-height: 220px;
+    }
+
     .canvas-item {
         width: 40px;
         height: 60px;
