@@ -80,6 +80,8 @@ let savedLayouts = [];
 let uploadedImages = [];
 let uploadedLibraryItems = [];
 let deferredInstallPrompt = null;
+let slides = [];
+let currentSlideIndex = -1;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -217,7 +219,18 @@ function initializeLibrary() {
         
         libItem.appendChild(emojiHolder);
         
-        libItem.title = item.name + ' (dobbeltklik for at tilføje)';
+        // Add to Slides button
+        const addToSlidesBtn = document.createElement('button');
+        addToSlidesBtn.className = 'library-item-add-slides';
+        addToSlidesBtn.innerHTML = '➕';
+        addToSlidesBtn.title = 'Tilføj til Slides';
+        addToSlidesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addToSlides(item.emoji, libItem.dataset.displayName || item.name);
+        });
+        libItem.appendChild(addToSlidesBtn);
+        
+        libItem.title = item.name + ' (dobbeltklik for at tilføje)'
         libItem.draggable = true;
         libItem.dataset.name = item.name;
         libItem.dataset.displayName = item.name;
@@ -225,7 +238,13 @@ function initializeLibrary() {
         
         libItem.addEventListener('dragstart', handleLibraryDragStart);
         libItem.addEventListener('dragend', handleDragEnd);
-        libItem.addEventListener('dblclick', () => addToCanvasQuick(item.emoji, libItem.dataset.displayName || item.name));
+        libItem.addEventListener('dblclick', (e) => {
+            if (e.shiftKey) {
+                addToSlides(item.emoji, libItem.dataset.displayName || item.name);
+            } else {
+                addToCanvasQuick(item.emoji, libItem.dataset.displayName || item.name);
+            }
+        });
         
         library.appendChild(libItem);
     });
@@ -713,6 +732,17 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     };
     item.appendChild(deleteBtn);
     
+    // Add to Slides button
+    const addToSlidesBtn = document.createElement('button');
+    addToSlidesBtn.className = 'library-item-add-slides';
+    addToSlidesBtn.innerHTML = '➕';
+    addToSlidesBtn.title = 'Tilføj til Slides';
+    addToSlidesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addToSlides(dataUrl, item.dataset.displayTitle || cleanName, 'image');
+    });
+    item.appendChild(addToSlidesBtn);
+    
     item.draggable = true;
     
     item.addEventListener('dragstart', (e) => {
@@ -730,8 +760,13 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
         e.dataTransfer.setData('itemName', item.dataset.displayTitle || cleanName);
     });
     
-    item.addEventListener('dblclick', () => addToCanvasQuick(dataUrl, item.dataset.displayTitle || cleanName, 'image'));
-    item.addEventListener('dblclick', () => addToCanvasQuick(dataUrl, cleanName, 'image'));
+    item.addEventListener('dblclick', (e) => {
+        if (e.shiftKey) {
+            addToSlides(dataUrl, item.dataset.displayTitle || cleanName, 'image');
+        } else {
+            addToCanvasQuick(dataUrl, item.dataset.displayTitle || cleanName, 'image');
+        }
+    });
     
     library.appendChild(item);
     
@@ -1093,4 +1128,151 @@ function downloadAsImage() {
         a.click();
         URL.revokeObjectURL(url);
     });
+}
+
+// ===== SLIDES/TEMPLATE FUNCTIONALITY =====
+
+// Toggle between Canvas and Slides view
+function toggleCanvasView() {
+    const canvasArea = document.querySelector('.canvas-area');
+    const slidesArea = document.getElementById('slidesArea');
+    
+    if (slidesArea.style.display === 'none') {
+        canvasArea.style.display = 'none';
+        slidesArea.style.display = 'flex';
+    } else {
+        slidesArea.style.display = 'none';
+        canvasArea.style.display = 'flex';
+    }
+}
+
+// Add item to slides
+function addToSlides(content, itemName = '', type = 'emoji') {
+    const slide = {
+        content: content,
+        name: itemName,
+        type: type
+    };
+    
+    slides.push(slide);
+    updateSlidesDisplay();
+    
+    // Auto-show slides view
+    const slidesArea = document.getElementById('slidesArea');
+    const canvasArea = document.querySelector('.canvas-area');
+    if (slidesArea.style.display === 'none') {
+        canvasArea.style.display = 'none';
+        slidesArea.style.display = 'flex';
+    }
+}
+
+// Render slides thumbnails and setup drag-and-drop
+function updateSlidesDisplay() {
+    const thumbsContainer = document.getElementById('slidesThumbs');
+    thumbsContainer.innerHTML = '';
+    
+    slides.forEach((slide, index) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'slide-thumb';
+        thumb.draggable = true;
+        thumb.dataset.index = index;
+        
+        if (index === currentSlideIndex) {
+            thumb.classList.add('active');
+        }
+        
+        // Create content
+        const contentEl = document.createElement('div');
+        if (slide.type === 'image') {
+            const img = document.createElement('img');
+            img.src = slide.content;
+            contentEl.appendChild(img);
+        } else {
+            const emoji = document.createElement('div');
+            emoji.className = 'emoji';
+            emoji.textContent = slide.content;
+            contentEl.appendChild(emoji);
+        }
+        
+        thumb.appendChild(contentEl);
+        
+        // Click to select
+        thumb.addEventListener('click', () => selectSlide(index));
+        
+        // Drag events for reordering
+        thumb.addEventListener('dragstart', (e) => {
+            thumb.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('slideIndex', index);
+        });
+        
+        thumb.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            thumb.style.opacity = '0.5';
+        });
+        
+        thumb.addEventListener('dragleave', () => {
+            thumb.style.opacity = '1';
+        });
+        
+        thumb.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const fromIndex = parseInt(e.dataTransfer.getData('slideIndex'));
+            const toIndex = index;
+            
+            if (fromIndex !== toIndex) {
+                // Swap slides
+                [slides[fromIndex], slides[toIndex]] = [slides[toIndex], slides[fromIndex]];
+                updateSlidesDisplay();
+            }
+        });
+        
+        thumb.addEventListener('dragend', () => {
+            thumb.classList.remove('dragging');
+            thumb.style.opacity = '1';
+        });
+        
+        thumbsContainer.appendChild(thumb);
+    });
+}
+
+// Select slide and show large
+function selectSlide(index) {
+    if (index < 0 || index >= slides.length) return;
+    
+    currentSlideIndex = index;
+    const slide = slides[index];
+    const display =document.getElementById('slidesDisplayContent');
+    
+    // Update active thumb
+    document.querySelectorAll('.slide-thumb').forEach((thumb, i) => {
+        if (i === index) {
+            thumb.classList.add('active');
+        } else {
+            thumb.classList.remove('active');
+        }
+    });
+    
+    // Render large display
+    display.innerHTML = '';
+    if (slide.type === 'image') {
+        const img = document.createElement('img');
+        img.src = slide.content;
+        display.appendChild(img);
+    } else {
+        const emoji = document.createElement('div');
+        emoji.className = 'emoji';
+        emoji.textContent = slide.content;
+        display.appendChild(emoji);
+    }
+}
+
+// Clear all slides
+function clearSlides() {
+    if (!confirm('Slet alle slides?')) return;
+    slides = [];
+    currentSlideIndex = -1;
+    updateSlidesDisplay();
+    document.getElementById('slidesDisplayContent').innerHTML = '<p style="color: #999; text-align: center; margin-top: 50px;">Klik på en slide ovenfor</p>';
 }

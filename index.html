@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180'/><text x='50%' y='50%' font-size='80' fill='white' text-anchor='middle' dominant-baseline='middle'>📦</text></svg>">
     <link rel="manifest" href="manifest.json">
     <title>Pictogrammer - Drag & Drop Builder</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
     <div class="container">
@@ -57,6 +57,7 @@
                         <button onclick="clearCanvas()">🗑️ Ryd Canvas</button>
                         <button onclick="downloadAsImage()">⬇️ Download</button>
                         <button onclick="toggleSavedLayouts()">📂 Vis Gemte Layouts</button>
+                        <button onclick="toggleCanvasView()">📊 Slides</button>
                     </div>
                 </div>
                 <div id="savedLayoutsPanel" class="saved-layouts-panel" style="display:none;">
@@ -66,6 +67,29 @@
 
                 <div class="canvas" id="canvas">
                     <p class="canvas-hint">Drag pictogrammer her...</p>
+                </div>
+            </main>
+
+            <!-- Slides/Template View -->
+            <main class="slides-area" id="slidesArea" style="display:none;">
+                <div class="slides-header">
+                    <h2>📊 Slides</h2>
+                    <div class="slides-buttons">
+                        <button onclick="toggleCanvasView()">← Tilbage til Canvas</button>
+                        <button onclick="clearSlides()">🗑️ Ryd Slides</button>
+                    </div>
+                </div>
+
+                <!-- Overlinje med thumbnails -->
+                <div class="slides-thumbs-container">
+                    <div class="slides-thumbs" id="slidesThumbs"></div>
+                </div>
+
+                <!-- Stort display område -->
+                <div class="slides-display">
+                    <div id="slidesDisplayContent" class="slides-display-content">
+                        <p style="color: #999; text-align: center; margin-top: 50px;">Klik på en slide ovenfor</p>
+                    </div>
                 </div>
             </main>
 

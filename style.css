@@ -88,22 +88,54 @@ header p {
 }
 
 .library-item {
+    position: relative;
     width: 100%;
-    height: 64px;
+    height: clamp(50px, 7vw, 70px);
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: 2px solid #667eea;
     border-radius: 10px;
     cursor: grab;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: center;
     padding: 0;
     transition: all 0.3s ease;
     user-select: none;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
     color: white;
+}
+
+.library-item-add-slides {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.library-item:hover .library-item-add-slides {
+    display: flex;
+}
+
+.library-item-add-slides:hover {
+    background: rgba(76, 175, 80, 1);
+    transform: scale(1.15);
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.4);
 }
 
 .library-item:hover {
@@ -118,20 +150,30 @@ header p {
 }
 
 .library-item-title {
-    padding: 1px 2px;
-    font-size: 0.6em;
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.15);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2px 4px;
+    font-size: 0.5em;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.4);
+    border: none;
+    border-radius: 3px;
     cursor: pointer;
     text-align: center;
     word-break: break-word;
     transition: background 0.2s ease;
     color: white;
+    max-width: 85%;
+    z-index: 10;
+    white-space: normal;
+    overflow: hidden;
+    line-height: 1.1;
 }
 
 .library-item-title:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: transparent;
 }
 
 .library-item-title input {
@@ -319,15 +361,16 @@ header p {
     position: absolute;
     cursor: move;
     user-select: none;
-    padding: 8px;
+    padding: 6px;
     border-radius: 8px;
     transition: all 0.2s ease;
     background: white;
     border: 2px solid transparent;
     display: flex;
     flex-direction: column;
-    width: clamp(35px, 7vw, 100px);
-    height: clamp(50px, 10vw, 140px);
+    width: clamp(35px, 6vw, 70px);
+    height: clamp(50px, 8vw, 90px);
+    padding-bottom: 30px;
 }
 
 .canvas-item:hover {
@@ -346,22 +389,30 @@ header p {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px;
+    padding: 0px;
 }
 
 .canvas-item-title {
-    padding: 3px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2px 4px;
     text-align: center;
-    font-size: 0.78em;
-    font-weight: 600;
-    color: #333;
-    background: rgba(102, 126, 234, 0.1);
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    font-size: 0.5em;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.4);
+    border: none;
+    border-radius: 3px;
     cursor: pointer;
     transition: background 0.2s ease;
     word-break: break-word;
-    max-height: 25px;
+    max-width: 85%;
+    z-index: 10;
+    white-space: normal;
     overflow: hidden;
+    line-height: 1.1;
 }
 
 .canvas-item-title:hover {
@@ -393,12 +444,12 @@ header p {
     height: 100%;
     object-fit: contain;
     pointer-events: none;
-    max-width: clamp(15px, 3.5vw, 70px);
-    max-height: clamp(15px, 3.5vw, 70px);
+    max-width: clamp(12px, 2.5vw, 35px);
+    max-height: clamp(12px, 2.5vw, 35px);
 }
 
 .canvas-item .emoji {
-    font-size: clamp(1em, 2vw, 3em);
+    font-size: clamp(0.8em, 1.5vw, 1.8em);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -557,11 +608,15 @@ header p {
 
 @media (max-width: 900px) {
     .main-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: 120px 1fr;
+        gap: 10px;
     }
 
     .sidebar {
-        display: none;
+        display: block;
+        padding: 10px;
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
     }
 
     .canvas-item {
@@ -636,7 +691,6 @@ header p {
     }
 
     .library-item {
-        height: 60px;
         font-size: 1.8em;
     }
 
@@ -721,4 +775,146 @@ header p {
 
 .canvas-item {
     animation: fadeIn 0.3s ease;
+}
+
+/* Slides/Template View */
+.slides-area {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 250px);
+}
+
+.slides-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.slides-header h2 {
+    color: #667eea;
+    font-size: 1.3em;
+}
+
+.slides-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.slides-buttons button {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95em;
+}
+
+.slides-buttons button:hover {
+    background: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Overlay med thumbnails */
+.slides-thumbs-container {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    overflow-x: auto;
+    min-height: 100px;
+}
+
+.slides-thumbs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.slide-thumb {
+    width: 80px;
+    height: 80px;
+    border: 3px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.slide-thumb img,
+.slide-thumb .emoji {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 5px;
+}
+
+.slide-thumb .emoji {
+    font-size: 2.5em;
+}
+
+.slide-thumb:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transform: scale(1.05);
+}
+
+.slide-thumb.active {
+    border-color: #667eea;
+    background: #f0f5ff;
+    box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+}
+
+.slide-thumb.dragging {
+    opacity: 0.5;
+}
+
+/* Stort display område */
+.slides-display {
+    flex: 1;
+    background: #f5f5f5;
+    border-radius: 10px;
+    border: 2px dashed #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.slides-display-content {
+    text-align: center;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.slides-display-content img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 400px;
+    max-height: 400px;
+}
+
+.slides-display-content .emoji {
+    font-size: 8em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
