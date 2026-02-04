@@ -1019,7 +1019,9 @@ header p {
         padding: 12px 14px;
     }
 
-    .canvas-center-actions {
+    .canvas-center-actions,
+    .slides-center-actions,
+    .weekly-center-actions {
         justify-content: stretch;
     }
 
@@ -1285,6 +1287,12 @@ header p {
 .slides-header h2 {
     color: #667eea;
     font-size: 1.3em;
+}
+
+.slides-center-actions {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 12px;
 }
 
 .slides-buttons {
@@ -1562,6 +1570,12 @@ header p {
     font-size: 1.5em;
     color: #333;
     margin: 0;
+}
+
+.weekly-center-actions {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 12px;
 }
 
 .weekly-buttons {

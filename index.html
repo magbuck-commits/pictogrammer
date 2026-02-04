@@ -94,6 +94,17 @@
                 <div class="slides-header">
                     <h2>📊 Slides</h2>
                 </div>
+                <div class="slides-center-actions">
+                    <button class="canvas-clear-btn" onclick="clearSlides()">🗑️ Ryd Slides</button>
+                </div>
+                <div class="template-select-row">
+                    <span class="template-label">Templates</span>
+                    <select class="template-select" aria-label="Vælg template">
+                        <option value="canvas">🧱 Canvas</option>
+                        <option value="slides">📊 Slides</option>
+                        <option value="weekly">📅 Ugeoversigt</option>
+                    </select>
+                </div>
 
                 <!-- Overlinje med thumbnails -->
                 <div class="slides-thumbs-container">
@@ -115,13 +126,6 @@
                     <div class="slides-buttons">
                         <button onclick="saveLayout()">💾 Gem Layout</button>
                         <button onclick="downloadSlidesAsPdf()">⬇️ Download layout</button>
-                        <span class="template-label">Templates</span>
-                        <select class="template-select" aria-label="Vælg template">
-                            <option value="canvas">🧱 Canvas</option>
-                            <option value="slides">📊 Slides</option>
-                            <option value="weekly">📅 Ugeoversigt</option>
-                        </select>
-                        <button onclick="clearSlides()">🗑️ Ryd Slides</button>
                     </div>
                 </div>
             </main>
@@ -130,6 +134,17 @@
             <main class="weekly-area" id="weeklyArea" style="display:none;">
                 <div class="weekly-header">
                     <h2>📅 Ugeoversigt</h2>
+                </div>
+                <div class="weekly-center-actions">
+                    <button class="canvas-clear-btn" onclick="clearWeeklyView()">🗑️ Ryd Uge</button>
+                </div>
+                <div class="template-select-row">
+                    <span class="template-label">Templates</span>
+                    <select class="template-select" aria-label="Vælg template">
+                        <option value="canvas">🧱 Canvas</option>
+                        <option value="slides">📊 Slides</option>
+                        <option value="weekly">📅 Ugeoversigt</option>
+                    </select>
                 </div>
                 
                 <div class="weekly-container">
@@ -141,13 +156,6 @@
                     <div class="weekly-buttons">
                         <button onclick="saveLayout()">💾 Gem Layout</button>
                         <button id="highlightToggleBtn" onclick="toggleDayHighlight()">✨ Fremhæv dag: Fra</button>
-                        <span class="template-label">Templates</span>
-                        <select class="template-select" aria-label="Vælg template">
-                            <option value="canvas">🧱 Canvas</option>
-                            <option value="slides">📊 Slides</option>
-                            <option value="weekly">📅 Ugeoversigt</option>
-                        </select>
-                        <button onclick="clearWeeklyView()">🗑️ Ryd Uge</button>
                     </div>
                 </div>
             </main>
