@@ -404,6 +404,12 @@ header p {
         box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
         z-index: 100;
     }
+
+    .canvas-area,
+    .slides-area,
+    .weekly-area {
+        padding-bottom: 80px;
+    }
 }
 
 .canvas-center-actions {
