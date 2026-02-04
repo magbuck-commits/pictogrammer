@@ -1261,6 +1261,12 @@ header p {
     border-bottom: 2px solid #f0f0f0;
 }
 
+.slides-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
 .slides-header h2 {
     color: #667eea;
     font-size: 1.3em;
@@ -1529,6 +1535,12 @@ header p {
     justify-content: space-between;
     align-items: center;
     gap: 15px;
+}
+
+.weekly-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
 }
 
 .weekly-header h2 {

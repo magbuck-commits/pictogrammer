@@ -93,17 +93,6 @@
             <main class="slides-area" id="slidesArea" style="display:none;">
                 <div class="slides-header">
                     <h2>📊 Slides</h2>
-                    <div class="slides-buttons">
-                        <button onclick="saveLayout()">💾 Gem Layout</button>
-                        <button onclick="downloadSlidesAsPdf()">⬇️ Download layout</button>
-                        <span class="template-label">Templates</span>
-                        <select class="template-select" aria-label="Vælg template">
-                            <option value="canvas">🧱 Canvas</option>
-                            <option value="slides">📊 Slides</option>
-                            <option value="weekly">📅 Ugeoversigt</option>
-                        </select>
-                        <button onclick="clearSlides()">🗑️ Ryd Slides</button>
-                    </div>
                 </div>
 
                 <!-- Overlinje med thumbnails -->
@@ -122,12 +111,33 @@
                         <button id="slidesRemoveBtn" onclick="removeCurrentSlide()" title="Fjern slide">-</button>
                     </div>
                 </div>
+                <div class="slides-footer">
+                    <div class="slides-buttons">
+                        <button onclick="saveLayout()">💾 Gem Layout</button>
+                        <button onclick="downloadSlidesAsPdf()">⬇️ Download layout</button>
+                        <span class="template-label">Templates</span>
+                        <select class="template-select" aria-label="Vælg template">
+                            <option value="canvas">🧱 Canvas</option>
+                            <option value="slides">📊 Slides</option>
+                            <option value="weekly">📅 Ugeoversigt</option>
+                        </select>
+                        <button onclick="clearSlides()">🗑️ Ryd Slides</button>
+                    </div>
+                </div>
             </main>
 
             <!-- Weekly View -->
             <main class="weekly-area" id="weeklyArea" style="display:none;">
                 <div class="weekly-header">
                     <h2>📅 Ugeoversigt</h2>
+                </div>
+                
+                <div class="weekly-container">
+                    <div class="weekly-grid" id="weeklyGrid">
+                        <!-- 7 columns for each day -->
+                    </div>
+                </div>
+                <div class="weekly-footer">
                     <div class="weekly-buttons">
                         <button onclick="saveLayout()">💾 Gem Layout</button>
                         <button id="highlightToggleBtn" onclick="toggleDayHighlight()">✨ Fremhæv dag: Fra</button>
@@ -138,12 +148,6 @@
                             <option value="weekly">📅 Ugeoversigt</option>
                         </select>
                         <button onclick="clearWeeklyView()">🗑️ Ryd Uge</button>
-                    </div>
-                </div>
-                
-                <div class="weekly-container">
-                    <div class="weekly-grid" id="weeklyGrid">
-                        <!-- 7 columns for each day -->
                     </div>
                 </div>
             </main>
