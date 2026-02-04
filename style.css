@@ -372,6 +372,8 @@ header p {
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(102, 126, 234, 0.1);
+    position: relative;
+    z-index: 1;
 }
 
 .canvas-header {
@@ -1267,6 +1269,8 @@ header p {
     display: flex;
     flex-direction: column;
     height: calc(100vh - 250px);
+    position: relative;
+    z-index: 1;
 }
 
 .slides-header {
@@ -1551,6 +1555,8 @@ header p {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     height: auto;
     min-height: calc(100vh - 280px);
+    position: relative;
+    z-index: 1;
 }
 
 .weekly-header {
