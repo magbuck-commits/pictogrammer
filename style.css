@@ -395,22 +395,21 @@ header p {
     .canvas-footer,
     .slides-footer,
     .weekly-footer {
-        position: sticky;
-        bottom: 0;
+        position: static;
         background: white;
         padding: 16px 16px 20px;
         margin: 16px 0 0;
         border-top: 2px solid #e8eaf6;
         box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
-        z-index: 100;
+        z-index: auto;
         border-radius: 0 0 20px 20px;
     }
 
     .canvas-area,
     .slides-area,
     .weekly-area {
-        padding-bottom: 0;
-        overflow: hidden;
+        padding-bottom: 96px;
+        overflow: visible;
     }
 }
 
