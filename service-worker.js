@@ -1,5 +1,5 @@
 // Service Worker for Pictogrammer PWA
-const CACHE_NAME = 'pictogrammer-v41';
+const CACHE_NAME = 'pictogrammer-v42';
 const urlsToCache = [
   './',
   './script.js',
@@ -91,13 +91,44 @@ async function syncLayouts() {
 
 // Push notifications (optional - for future features)
 self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Pictogrammer';
   const options = {
-    body: event.data ? event.data.text() : 'Notification',
-    icon: './data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23667eea" width="192" height="192" rx="45"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dominant-baseline="middle">📦</text></svg>',
-    badge: './data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23667eea" width="192" height="192" rx="45"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dominant-baseline="middle">📦</text></svg>'
+    body: data.body || 'Ny besked fra Pictogrammer',
+    icon: data.icon || './data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23667eea" width="192" height="192" rx="45"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dominant-baseline="middle">📦</text></svg>',
+    badge: './data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23667eea" width="192" height="192" rx="45"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dominant-baseline="middle">📦</text></svg>',
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'pictogrammer-notification',
+    data: data.url || './',
+    requireInteraction: false,
+    timestamp: Date.now()
   };
 
   event.waitUntil(
-    self.registration.showNotification('Pictogrammer', options)
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  const urlToOpen = event.notification.data || './';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If not, open a new window
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
   );
 });

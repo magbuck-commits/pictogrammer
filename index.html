@@ -24,36 +24,44 @@
                     </div>
         </header>
 
-        <div class="main-content">
-            <!-- Venstre sidebar - Søg, Bibliotek og Upload -->
-            <aside class="sidebar">
-                <div class="section search-section">
-                    <h2>Søg</h2>
-                    <input type="text" id="searchInput" placeholder="Søg i bibliotek...">
-                </div>
-
-                <div class="section recent-section">
-                    <h2>Brugt for nyligt</h2>
-                    <div class="recent-library" id="recentLibrary">
-                        <p class="recent-empty">Ingen endnu</p>
+        <div class="library-drawer" id="libraryDrawer" aria-hidden="true">
+            <div class="library-drawer-panel" role="dialog" aria-label="Bibliotek">
+                <aside class="sidebar">
+                    <div class="section search-section">
+                        <h2>Søg</h2>
+                        <input type="text" id="searchInput" placeholder="Søg i bibliotek...">
                     </div>
-                </div>
 
-                <div class="scrollable-section">
-                    <div class="section">
-                        <h2>Bibliotek</h2>
-                        <div class="library" id="library">
-                            <!-- Pictogrammer tilføjes her -->
+                    <div class="section recent-section">
+                        <h2>Brugt for nyligt</h2>
+                        <div class="recent-library" id="recentLibrary">
+                            <p class="recent-empty">Ingen endnu</p>
                         </div>
                     </div>
 
-                    <div class="section">
-                        <h2>Upload</h2>
-                        <input type="file" id="uploadInput" accept="image/*" multiple>
-                        <label for="uploadInput" class="upload-btn">+ Upload Billeder</label>
+                    <div class="scrollable-section">
+                        <div class="section">
+                            <div class="library" id="library">
+                                <!-- Pictogrammer tilføjes her -->
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h2>Upload</h2>
+                            <input type="file" id="uploadInput" accept="image/*" multiple>
+                            <label for="uploadInput" class="upload-btn">+ Upload Billeder</label>
+                        </div>
                     </div>
-                </div>
-            </aside>
+                </aside>
+            </div>
+            <div class="library-drawer-backdrop" id="libraryDrawerBackdrop"></div>
+        </div>
+
+        <button class="library-tab" id="libraryTab" type="button" aria-controls="libraryDrawer" aria-expanded="false">
+            Bibliotek
+        </button>
+
+        <div class="main-content">
 
             <!-- Centertstykke - Canvas -->
             <main class="canvas-area">

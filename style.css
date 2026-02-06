@@ -18,6 +18,76 @@ body {
     padding: 20px;
 }
 
+.library-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.library-drawer-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: min(360px, 85vw);
+    z-index: 1;
+    pointer-events: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.library-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.library-drawer.open .library-drawer-panel {
+    transform: translateX(0);
+}
+
+.library-drawer.open .library-drawer-backdrop {
+    opacity: 1;
+}
+
+body.drawer-open {
+    overflow: hidden;
+}
+
+
+.library-tab {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2001;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 0 12px 12px 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.85em;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, left 0.3s ease;
+}
+
+.library-tab:hover {
+    transform: translateY(-50%) translateX(4px);
+    box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
+}
+
+body.drawer-open .library-tab {
+    left: min(360px, 85vw);
+}
+
 header {
     text-align: center;
     color: white;
@@ -48,9 +118,9 @@ header p {
 /* removed tab styles to restore original single-page layout */
 .main-content {
     display: grid;
-    grid-template-columns: 250px 1fr;
+    grid-template-columns: 1fr;
     gap: 20px;
-    height: calc(100vh - 250px);
+    height: auto;
 }
 
 /* Sidebars */
@@ -60,15 +130,24 @@ header p {
     padding: 22px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
     overflow-y: auto;
-    max-height: calc(100vh - 280px);
+    max-height: 100vh;
     border: 1px solid #e8eaf6;
     transition: all 0.3s ease;
+}
+
+.library-drawer .sidebar {
+    height: 100%;
+    border-radius: 0 18px 18px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .search-section {
     background: transparent;
     padding: 0;
     margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
 .scrollable-section {
@@ -76,11 +155,14 @@ header p {
     padding: 0;
     box-shadow: none;
     overflow-y: auto;
-    max-height: calc(100vh - 360px);
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .section {
     margin-bottom: 25px;
+    flex-shrink: 0;
 }
 
 .section h2 {
@@ -103,7 +185,8 @@ header p {
 .library-item {
     position: relative;
     width: 100%;
-    height: clamp(50px, 7vw, 70px);
+    height: auto;
+    min-height: 90px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
     border-radius: 14px;
@@ -111,14 +194,14 @@ header p {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 0;
+    justify-content: flex-start;
+    padding: 10px 8px 12px;
     transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     user-select: none;
     overflow: visible;
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
     color: white;
-}}
+}
 
 .library-item-add-slides {
     position: absolute;
@@ -174,22 +257,21 @@ header p {
 }
 
 .library-item-title {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 2px 4px;
-    font-size: 0.5em;
+    position: static;
+    transform: none;
+    margin-top: 6px;
+    padding: 4px 6px;
+    font-size: 0.65em;
     font-weight: 700;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.15);
     border: none;
-    border-radius: 3px;
+    border-radius: 6px;
     cursor: pointer;
     text-align: center;
     word-break: break-word;
     transition: background 0.2s ease;
-    color: white;
-    max-width: 85%;
+    color: #ffffff;
+    width: 100%;
     z-index: 10;
     white-space: normal;
     overflow: hidden;
@@ -197,7 +279,7 @@ header p {
 }
 
 .library-item-title:hover {
-    background: transparent;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 .library-item-title input {
@@ -206,7 +288,7 @@ header p {
     background: white;
     padding: 2px;
     border-radius: 4px;
-    font-size: 0.68em;
+    font-size: 0.75em;
     text-align: center;
     border: 1px solid #667eea;
     font-weight: 600;
@@ -310,6 +392,7 @@ header p {
 /* Recent items */
 .recent-section {
     margin-bottom: 15px;
+    flex-shrink: 0;
 }
 
 .recent-library {
@@ -937,13 +1020,13 @@ header p {
 /* Responsive */
 @media (max-width: 1200px) {
     .main-content {
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 900px) {
     .main-content {
-        grid-template-columns: 120px 1fr;
+        grid-template-columns: 1fr;
         gap: 10px;
     }
 
@@ -1689,6 +1772,7 @@ header p {
     padding: 12px;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);
     transition: all 0.3s ease;
+    min-height: 240px;
 }
 
 .day-column.today .day-items {
@@ -1713,6 +1797,8 @@ header p {
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     user-select: none;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    touch-action: none;
+    position: relative;
 }
 
 .day-item:hover {
@@ -1727,6 +1813,27 @@ header p {
     transform: translateY(-1px);
 }
 
+.day-item.dragging {
+    opacity: 0.3;
+    transform: scale(0.95);
+    z-index: 1;
+}
+
+.day-item.drag-target {
+    border-color: #667eea;
+    border-width: 2px;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.drag-ghost {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3) !important;
+    cursor: grabbing !important;
+    border: 2px solid #667eea !important;
+    background: white !important;
+    border-radius: 10px !important;
+}
+
 .day-item-emoji {
     font-size: 1.5em;
     min-width: 30px;
@@ -1735,6 +1842,12 @@ header p {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.day-item img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
 }
 
 .day-item-name {

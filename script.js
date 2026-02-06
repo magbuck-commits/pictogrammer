@@ -89,6 +89,7 @@ let pendingNameResolve = null;
 let slidesListenersSetup = false;
 let snapToGrid = false;
 const GRID_SIZE = 10;
+let libraryDrawerApi = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -107,7 +108,204 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRecentItems();
     setSnapButtonState();
     setupTemplateSelects();
+    setupLibraryDrawer();
+    setupPushNotifications();
 });
+
+// ===== PUSH NOTIFICATIONS =====
+
+let notificationsEnabled = false;
+
+async function setupPushNotifications() {
+    if (!('Notification' in window)) {
+        console.log('Browser understøtter ikke notifications');
+        return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+        console.log('Browser understøtter ikke service workers');
+        return;
+    }
+
+    // Check if notifications are already granted
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = true;
+        await subscribeToPush();
+    }
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        alert('Din browser understøtter ikke push beskeder');
+        return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+        notificationsEnabled = true;
+        await subscribeToPush();
+        showLocalNotification('Push beskeder aktiveret!', '🔔 Du vil nu modtage beskeder fra Pictogrammer appen');
+        return true;
+    } else {
+        alert('Du skal give tilladelse til push beskeder for at aktivere dem');
+        return false;
+    }
+}
+
+async function subscribeToPush() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        // For demo purposes - in production you'd use a real VAPID key
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(
+                'BEl62iUYgUivxIkv69yViEuiBIa-Ib37J8xQmR8JxYk5CK9TkC_fhWnJdBSIH42Zqtq8cG1pOjU_VCGFr1XYvqg'
+            )
+        });
+        
+        console.log('Push subscription:', subscription);
+        // In production, send this to your server
+        localStorage.setItem('pushSubscription', JSON.stringify(subscription));
+    } catch (err) {
+        console.log('Kunne ikke subscribe til push:', err);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function showLocalNotification(title, body, icon = '📦') {
+    if (!notificationsEnabled || Notification.permission !== 'granted') {
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+            body: body,
+            icon: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192' rx='45'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>${icon}</text></svg>`,
+            badge: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192' rx='45'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dominant-baseline='middle'>📦</text></svg>`,
+            vibrate: [200, 100, 200],
+            tag: 'pictogrammer-notification',
+            requireInteraction: false,
+            timestamp: Date.now()
+        });
+    } catch (err) {
+        console.log('Kunne ikke vise notification:', err);
+    }
+}
+
+function setupLibraryDrawer() {
+    const drawer = document.getElementById('libraryDrawer');
+    const backdrop = document.getElementById('libraryDrawerBackdrop');
+    const panel = drawer ? drawer.querySelector('.library-drawer-panel') : null;
+    const tab = document.getElementById('libraryTab');
+    if (!drawer || !backdrop || !panel) return;
+
+    const openDrawer = () => {
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('drawer-open');
+        if (tab) tab.setAttribute('aria-expanded', 'true');
+    };
+
+    const closeDrawer = () => {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('drawer-open');
+        if (tab) tab.setAttribute('aria-expanded', 'false');
+    };
+
+    backdrop.addEventListener('click', closeDrawer);
+    if (tab) {
+        tab.addEventListener('click', () => {
+            if (drawer.classList.contains('open')) {
+                closeDrawer();
+            } else {
+                openDrawer();
+            }
+        });
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!drawer.classList.contains('open')) return;
+        if (e.target.closest('.library-drawer-panel') || e.target.closest('#libraryTab')) {
+            return;
+        }
+        closeDrawer();
+    });
+
+    let startX = null;
+    let startY = null;
+    let tracking = false;
+    let startedFromEdge = false;
+    let startedInPanel = false;
+    const edgeSize = 24;
+    const minSwipe = 60;
+    const maxVertical = 80;
+
+    document.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startX = e.clientX;
+        startY = e.clientY;
+        tracking = true;
+        startedFromEdge = startX <= edgeSize;
+        startedInPanel = drawer.classList.contains('open') && !!e.target.closest('.library-drawer-panel');
+    });
+
+    document.addEventListener('pointerup', (e) => {
+        if (!tracking) return;
+        const deltaX = e.clientX - startX;
+        const deltaY = Math.abs(e.clientY - startY);
+
+        if (startedFromEdge && deltaX > minSwipe && deltaY < maxVertical) {
+            openDrawer();
+        }
+
+        if (drawer.classList.contains('open') && startedInPanel && deltaX < -minSwipe && deltaY < maxVertical) {
+            closeDrawer();
+        }
+
+        tracking = false;
+        startX = null;
+        startY = null;
+        startedFromEdge = false;
+        startedInPanel = false;
+    });
+
+    document.addEventListener('dragover', (e) => {
+        if (!isLibraryDragging || !drawer.classList.contains('open')) return;
+        const panelWidth = panel.getBoundingClientRect().width;
+        if (e.clientX > panelWidth + 8) {
+            closeDrawer();
+        }
+    });
+
+    libraryDrawerApi = {
+        open: openDrawer,
+        close: closeDrawer,
+        isOpen: () => drawer.classList.contains('open')
+    };
+}
+
+function closeLibraryDrawer() {
+    if (libraryDrawerApi && libraryDrawerApi.isOpen()) {
+        libraryDrawerApi.close();
+    }
+}
+
 
 function setupTemplateSelects() {
     document.querySelectorAll('.template-select').forEach(select => {
@@ -404,6 +602,29 @@ function setupInstallButton() {
         deferredInstallPrompt = null;
         btn.style.display = 'none';
     });
+    
+    // Add notification button
+    const notificationBtn = document.createElement('button');
+    notificationBtn.className = 'install-btn';
+    notificationBtn.textContent = '🔔 Aktiver Beskeder';
+    notificationBtn.id = 'notificationBtn';
+    notificationBtn.style.marginLeft = '10px';
+    notificationBtn.style.display = 'none';
+    
+    if ('Notification' in window && Notification.permission === 'default') {
+        notificationBtn.style.display = 'inline-block';
+    }
+    
+    notificationBtn.addEventListener('click', async () => {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+            notificationBtn.style.display = 'none';
+        }
+    });
+    
+    if (btn.parentElement) {
+        btn.parentElement.appendChild(notificationBtn);
+    }
 }
 
 // Initialize the library with default pictograms
@@ -416,19 +637,6 @@ function initializeLibrary() {
         libItem.className = 'library-item';
         libItem.style.flexDirection = 'column';
         
-        // Title
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'library-item-title';
-        titleDiv.textContent = item.name;
-        titleDiv.title = 'Klik for at redigere titel';
-        
-        titleDiv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            editLibraryEmojiTitle(titleDiv, libItem, item);
-        });
-        
-        libItem.appendChild(titleDiv);
-        
         // Icon holder
         const emojiHolder = document.createElement('div');
         emojiHolder.style.flex = '1';
@@ -440,6 +648,19 @@ function initializeLibrary() {
         emojiHolder.textContent = item.emoji;
         
         libItem.appendChild(emojiHolder);
+
+        // Title (below pictogram)
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'library-item-title';
+        titleDiv.textContent = item.name;
+        titleDiv.title = 'Klik for at redigere titel';
+        
+        titleDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editLibraryEmojiTitle(titleDiv, libItem, item);
+        });
+        
+        libItem.appendChild(titleDiv);
         
         // Add to Slides button
         const addToSlidesBtn = document.createElement('button');
@@ -486,6 +707,7 @@ function initializeLibrary() {
 
 // Handle drag start from library
 function handleLibraryDragStart(e) {
+    isLibraryDragging = true;
     draggedElement = e.target.cloneNode(true);
     draggedElement.classList.remove('selected');
     e.dataTransfer.effectAllowed = 'copy';
@@ -505,6 +727,8 @@ function handleLibraryDragStart(e) {
 // Handle drag end
 function handleDragEnd(e) {
     draggedElement = null;
+    isLibraryDragging = false;
+    closeLibraryDrawer();
 }
 
 // Setup canvas listeners
@@ -1077,10 +1301,16 @@ function renderRecentItems() {
         }
 
         recent.addEventListener('dragstart', (e) => {
+            isLibraryDragging = true;
             e.dataTransfer.effectAllowed = 'copy';
             e.dataTransfer.setData('text/plain', item.content);
             e.dataTransfer.setData('itemName', item.name || '');
             e.dataTransfer.setData('itemType', item.type || 'emoji');
+        });
+
+        recent.addEventListener('dragend', () => {
+            isLibraryDragging = false;
+            closeLibraryDrawer();
         });
 
         recent.addEventListener('click', () => {
@@ -1168,27 +1398,6 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     // Extract name from filename
     const cleanName = fileName.split('.').slice(0, -1).join('.').substring(0, 20);
     
-    // Title element for library item
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'library-item-title';
-    titleDiv.textContent = cleanName;
-    titleDiv.title = 'Klik for at redigere titel';
-    titleDiv.style.padding = '4px';
-    titleDiv.style.fontSize = '0.75em';
-    titleDiv.style.fontWeight = '600';
-    titleDiv.style.background = 'rgba(102, 126, 234, 0.1)';
-    titleDiv.style.borderBottom = '1px solid rgba(102, 126, 234, 0.2)';
-    titleDiv.style.cursor = 'pointer';
-    titleDiv.style.textAlign = 'center';
-    titleDiv.style.wordBreak = 'break-word';
-    
-    titleDiv.addEventListener('click', (e) => {
-        e.stopPropagation();
-        editLibraryTitle(titleDiv, item);
-    });
-    
-    item.appendChild(titleDiv);
-    
     // Image holder
     const imgHolder = document.createElement('div');
     imgHolder.style.flex = '1';
@@ -1205,6 +1414,19 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     
     imgHolder.appendChild(img);
     item.appendChild(imgHolder);
+
+    // Title element for library item (below pictogram)
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'library-item-title';
+    titleDiv.textContent = cleanName;
+    titleDiv.title = 'Klik for at redigere titel';
+    
+    titleDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editLibraryTitle(titleDiv, item);
+    });
+    
+    item.appendChild(titleDiv);
     
     // Set data attributes
     item.title = cleanName + ' (dobbeltklik for at tilføje)';
@@ -1239,6 +1461,7 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     item.draggable = true;
     
     item.addEventListener('dragstart', (e) => {
+        isLibraryDragging = true;
         draggedElement = document.createElement('div');
         draggedElement.className = 'canvas-item';
         
@@ -1253,6 +1476,11 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
         e.dataTransfer.setData('itemName', item.dataset.displayTitle || cleanName);
         e.dataTransfer.setData('itemType', 'image');
         e.dataTransfer.setData('libraryItemId', item.id);
+    });
+
+    item.addEventListener('dragend', () => {
+        isLibraryDragging = false;
+        closeLibraryDrawer();
     });
     
     item.addEventListener('dblclick', (e) => {
@@ -1486,6 +1714,13 @@ async function saveLayout() {
     if (panel) panel.style.display = 'block';
     loadSavedLayouts();
     alert('Layout gemt!');
+    
+    // Show notification
+    showLocalNotification(
+        'Layout gemt! 💾',
+        `"${layoutName}" er nu gemt og kan genbruges`,
+        '✅'
+    );
 }
 
 // Load saved layouts
@@ -2091,9 +2326,184 @@ let weeklyData = {
     sunday: []
 };
 
+// Load weeklyData from localStorage if it exists
+try {
+    const savedWeeklyData = localStorage.getItem('weeklyData');
+    if (savedWeeklyData) {
+        const loaded = JSON.parse(savedWeeklyData);
+        weeklyData = loaded;
+    }
+} catch (err) {
+    console.log('Could not load weeklyData from localStorage', err);
+}
+
 let highlightCurrentDay = false;
 const weeklyDays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const weeklyDaysKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+let weeklyPointerDrag = null;
+
+function clearWeeklyDragTargets(container) {
+    if (!container) return;
+    container.querySelectorAll('.day-item.drag-target').forEach(item => {
+        item.classList.remove('drag-target');
+    });
+}
+
+function getWeeklyTargetIndex(container, targetItem) {
+    if (!container) return null;
+    const items = Array.from(container.querySelectorAll('.day-item'));
+    if (!targetItem) return items.length;
+    return items.indexOf(targetItem);
+}
+
+function getWeeklyDropTarget(container, clientY, clientX, excludeItem) {
+    // Find the drop target by calculating which item the pointer is closest to
+    if (!container) return { index: 0, item: null };
+    
+    const items = Array.from(container.querySelectorAll('.day-item'));
+    if (items.length === 0) return { index: 0, item: null };
+    
+    let bestIndex = items.length; // Default to end
+    let bestDistance = Infinity;
+    let bestItem = null;
+    
+    // Find the item whose center is closest to the pointer
+    items.forEach((item, idx) => {
+        if (item === excludeItem) return; // Skip the item being dragged
+        
+        const rect = item.getBoundingClientRect();
+        const itemCenterY = rect.top + rect.height / 2;
+        const distance = Math.abs(clientY - itemCenterY);
+        
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestItem = item;
+            
+            // If pointer is above the item's center, insert before it
+            if (clientY < itemCenterY) {
+                bestIndex = idx;
+            } else {
+                // If pointer is below the center, insert after it
+                bestIndex = idx + 1;
+            }
+        }
+    });
+    
+    // Clamp index to valid range
+    if (bestIndex < 0) bestIndex = 0;
+    if (bestIndex > items.length) bestIndex = items.length;
+    
+    return { item: bestItem, index: bestIndex };
+}
+
+function startWeeklyPointerDrag(e, dayKey, itemIndex) {
+    const itemEl = e.currentTarget;
+    const container = itemEl.closest('.day-items');
+    if (!container) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Create ghost element that follows pointer
+    const ghost = itemEl.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.position = 'fixed';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '10000';
+    ghost.style.opacity = '0.8';
+    ghost.style.transform = 'scale(1.1)';
+    ghost.style.transition = 'none';
+    ghost.style.left = e.clientX - 40 + 'px';
+    ghost.style.top = e.clientY - 30 + 'px';
+    ghost.style.width = itemEl.offsetWidth + 'px';
+    document.body.appendChild(ghost);
+    
+    weeklyPointerDrag = {
+        itemEl,
+        ghost,
+        fromDay: dayKey,
+        fromIndex: itemIndex,
+        container,
+        targetContainer: container,
+        targetIndex: itemIndex,
+        pointerId: e.pointerId,
+        offsetX: 40,
+        offsetY: 30
+    };
+
+    itemEl.classList.add('dragging');
+    itemEl.setPointerCapture(e.pointerId);
+
+    const onMove = (ev) => {
+        if (!weeklyPointerDrag || weeklyPointerDrag.pointerId !== ev.pointerId) return;
+        
+        // Update ghost position to follow pointer
+        if (weeklyPointerDrag.ghost) {
+            weeklyPointerDrag.ghost.style.left = ev.clientX - weeklyPointerDrag.offsetX + 'px';
+            weeklyPointerDrag.ghost.style.top = ev.clientY - weeklyPointerDrag.offsetY + 'px';
+        }
+        
+        // Find the drop target based on Y-coordinate
+        let targetContainer = null;
+        
+        // Try to find container at pointer position
+        const element = document.elementFromPoint(ev.clientX, ev.clientY);
+        const potentialContainer = element ? element.closest('.day-items') : null;
+        
+        if (potentialContainer) {
+            targetContainer = potentialContainer;
+        } else {
+            targetContainer = container; // Stay in original container if not over another
+        }
+
+        if (weeklyPointerDrag.targetContainer !== targetContainer) {
+            clearWeeklyDragTargets(weeklyPointerDrag.targetContainer);
+            weeklyPointerDrag.targetContainer = targetContainer;
+        }
+
+        // Calculate drop target based on position within container
+        const dropTarget = getWeeklyDropTarget(targetContainer, ev.clientY, ev.clientX, itemEl);
+        
+        // Update visual feedback
+        clearWeeklyDragTargets(targetContainer);
+        if (dropTarget.item && dropTarget.item !== itemEl) {
+            dropTarget.item.classList.add('drag-target');
+        }
+        
+        weeklyPointerDrag.targetIndex = dropTarget.index;
+    };
+
+    const onEnd = (ev) => {
+        if (!weeklyPointerDrag || weeklyPointerDrag.pointerId !== ev.pointerId) return;
+        const targetContainer = weeklyPointerDrag.targetContainer;
+        const targetDay = targetContainer ? targetContainer.dataset.day : null;
+        const targetIndex = weeklyPointerDrag.targetIndex;
+
+        // Remove ghost element
+        if (weeklyPointerDrag.ghost && weeklyPointerDrag.ghost.parentNode) {
+            weeklyPointerDrag.ghost.parentNode.removeChild(weeklyPointerDrag.ghost);
+        }
+
+        itemEl.classList.remove('dragging');
+        clearWeeklyDragTargets(targetContainer);
+        itemEl.releasePointerCapture(ev.pointerId);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onEnd);
+        document.removeEventListener('pointercancel', onEnd);
+
+        if (targetDay !== null && targetDay !== undefined) {
+            moveWeeklyItem(weeklyPointerDrag.fromDay, weeklyPointerDrag.fromIndex, targetDay, targetIndex);
+        } else {
+            renderWeeklyGrid();
+            setupWeeklyListeners();
+        }
+        weeklyPointerDrag = null;
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onEnd);
+    document.addEventListener('pointercancel', onEnd);
+}
 
 function getCurrentDayKey() {
     const day = new Date().getDay();
@@ -2152,7 +2562,6 @@ function renderWeeklyGrid() {
 function createDayItem(item, dayKey, itemIndex) {
     const dayItem = document.createElement('div');
     dayItem.className = 'day-item';
-    dayItem.draggable = true;
     dayItem.dataset.day = dayKey;
     dayItem.dataset.index = itemIndex;
     
@@ -2163,6 +2572,7 @@ function createDayItem(item, dayKey, itemIndex) {
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'contain';
+        img.draggable = false;
         dayItem.appendChild(img);
     } else {
         // For emojis/text items, only show the pictogram
@@ -2172,19 +2582,8 @@ function createDayItem(item, dayKey, itemIndex) {
         dayItem.appendChild(emoji);
     }
 
-    // Drag out to remove
-    dayItem.addEventListener('dragstart', (e) => {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('weeklyItem', JSON.stringify({
-            fromDay: dayKey,
-            index: itemIndex
-        }));
-    });
-
-    dayItem.addEventListener('dragend', (e) => {
-        if (e.dataTransfer.dropEffect === 'none') {
-            removeWeeklyItem(dayKey, itemIndex);
-        }
+    dayItem.addEventListener('pointerdown', (e) => {
+        startWeeklyPointerDrag(e, dayKey, itemIndex);
     });
 
     return dayItem;
@@ -2195,7 +2594,8 @@ function setupWeeklyListeners() {
     document.querySelectorAll('.day-items').forEach(container => {
         container.addEventListener('dragover', (e) => {
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+            const isWeekly = (e.dataTransfer.types || []).includes('weeklyItem');
+            e.dataTransfer.dropEffect = isWeekly ? 'move' : 'copy';
             container.classList.add('drag-over');
         });
         
@@ -2215,13 +2615,8 @@ function setupWeeklyListeners() {
             if (weeklyDataRaw) {
                 try {
                     const moved = JSON.parse(weeklyDataRaw);
-                    const fromList = weeklyData[moved.fromDay] || [];
-                    const movedItem = fromList[moved.index];
-                    if (movedItem) {
-                        weeklyData[moved.fromDay].splice(moved.index, 1);
-                        addToWeeklyDay(dayKey, movedItem);
-                        return;
-                    }
+                    moveWeeklyItem(moved.fromDay, moved.index, dayKey, null);
+                    return;
                 } catch (err) {
                     console.log('Could not parse weekly item data');
                 }
@@ -2238,14 +2633,14 @@ function setupWeeklyListeners() {
                     name: name || 'Element',
                     type: type
                 };
-                addToWeeklyDay(dayKey, item);
+                addToWeeklyDay(dayKey, item, null);
             } else {
                 // Try JSON format if plain text didn't work
                 const jsonData = e.dataTransfer.getData('application/json');
                 if (jsonData) {
                     try {
                         const item = JSON.parse(jsonData);
-                        addToWeeklyDay(dayKey, item);
+                        addToWeeklyDay(dayKey, item, null);
                     } catch (err) {
                         console.log('Could not parse drag data');
                     }
@@ -2255,24 +2650,60 @@ function setupWeeklyListeners() {
     });
 }
 
-function addToWeeklyDay(dayKey, item) {
+function addToWeeklyDay(dayKey, item, insertIndex = null) {
     if (!weeklyData[dayKey]) {
         weeklyData[dayKey] = [];
     }
-    
-    weeklyData[dayKey].push({
+
+    const normalized = {
         content: item.content,
         name: item.type === 'image' ? '' : item.name,
         type: item.type
-    });
-    
+    };
+
+    if (insertIndex == null || insertIndex >= weeklyData[dayKey].length) {
+        weeklyData[dayKey].push(normalized);
+    } else {
+        weeklyData[dayKey].splice(Math.max(0, insertIndex), 0, normalized);
+    }
     renderWeeklyGrid();
     setupWeeklyListeners();
+    
+    // Persist changes
+    localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
+}
+
+function moveWeeklyItem(fromDay, fromIndex, toDay, toIndex) {
+    if (!weeklyData[fromDay] || !weeklyData[fromDay][fromIndex]) return;
+    if (!weeklyData[toDay]) weeklyData[toDay] = [];
+
+    const movedItem = weeklyData[fromDay].splice(fromIndex, 1)[0];
+    const targetList = weeklyData[toDay];
+    
+    // Handle null index (append to end)
+    let insertAt = toIndex == null ? targetList.length : toIndex;
+    
+    // Clamp to valid range
+    if (insertAt < 0) insertAt = 0;
+    if (insertAt > targetList.length) insertAt = targetList.length;
+    
+    // If moving within same day and removing from earlier index, adjust insertion point
+    if (fromDay === toDay && fromIndex < insertAt) {
+        insertAt -= 1;
+    }
+
+    targetList.splice(insertAt, 0, movedItem);
+    renderWeeklyGrid();
+    setupWeeklyListeners();
+    
+    // Persist changes
+    localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
 }
 
 function removeWeeklyItem(dayKey, itemIndex) {
     if (weeklyData[dayKey] && weeklyData[dayKey][itemIndex]) {
         weeklyData[dayKey].splice(itemIndex, 1);
+        localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
         renderWeeklyGrid();
         setupWeeklyListeners();
     }
@@ -2301,6 +2732,7 @@ function clearWeeklyView() {
         sunday: []
     };
     
+    localStorage.setItem('weeklyData', JSON.stringify(weeklyData));
     renderWeeklyGrid();
     setupWeeklyListeners();
 }
