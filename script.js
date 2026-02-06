@@ -1528,12 +1528,19 @@ function setupUploadListener() {
                 return;
             }
             
+            const baseName = file.name.split('.').slice(0, -1).join('.') || file.name;
+            const userName = prompt('Giv pictogrammet et navn:', baseName);
+            const cleanUserName = (userName || '').trim();
+            if (!cleanUserName) {
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = (event) => {
                 console.log('File loaded:', file.name);
                 const dataUrl = event.target.result;
                 uploadedImages.push(dataUrl);
-                addUploadedItemToLibrary(dataUrl, file.name);
+                addUploadedItemToLibrary(dataUrl, file.name, cleanUserName);
                 console.log('Total uploaded images:', uploadedImages.length);
             };
             reader.onerror = () => {
@@ -1550,7 +1557,7 @@ function setupUploadListener() {
 
 
 // Add uploaded image to library
-function addUploadedItemToLibrary(dataUrl, fileName) {
+function addUploadedItemToLibrary(dataUrl, fileName, displayNameOverride = '') {
     console.log('Adding uploaded item:', fileName);
     
     const library = document.getElementById('library');
@@ -1567,7 +1574,8 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     item.style.flexDirection = 'column';
     
     // Extract name from filename
-    const cleanName = fileName.split('.').slice(0, -1).join('.').substring(0, 20);
+    const baseName = fileName.split('.').slice(0, -1).join('.') || fileName;
+    const cleanName = (displayNameOverride || baseName).substring(0, 30);
     
     // Image holder
     const imgHolder = document.createElement('div');
