@@ -57,8 +57,39 @@
             <div class="library-drawer-backdrop" id="libraryDrawerBackdrop"></div>
         </div>
 
+        <div class="time-timer-drawer" id="timeTimerDrawer" aria-hidden="true">
+            <div class="time-timer-panel" role="dialog" aria-label="Time Timer">
+                <div class="time-timer-content">
+                    <h2>Time Timer</h2>
+                    <div class="time-timer-circle" id="timeTimerCircle" style="--progress: 0;">
+                        <div class="time-timer-label" id="timeTimerLabel">00:00</div>
+                    </div>
+                    <div class="time-timer-inputs">
+                        <label>
+                            Min
+                            <input type="number" id="timeTimerMinutes" min="0" max="240" value="5">
+                        </label>
+                        <label>
+                            Sek
+                            <input type="number" id="timeTimerSeconds" min="0" max="59" value="0">
+                        </label>
+                    </div>
+                    <div class="time-timer-actions">
+                        <button id="timeTimerStart">Start</button>
+                        <button id="timeTimerPause">Pause</button>
+                        <button id="timeTimerReset">Nulstil</button>
+                    </div>
+                </div>
+            </div>
+            <div class="time-timer-backdrop" id="timeTimerBackdrop"></div>
+        </div>
+
         <button class="library-tab" id="libraryTab" type="button" aria-controls="libraryDrawer" aria-expanded="false">
             Bibliotek
+        </button>
+
+        <button class="time-timer-tab" id="timeTimerTab" type="button" aria-controls="timeTimerDrawer" aria-expanded="false">
+            Timer
         </button>
 
         <div class="main-content">
@@ -127,6 +158,7 @@
                     <div class="slides-display-controls">
                         <button id="slidesPrevBtn" onclick="showPrevSlide()" title="Forrige slide">&lt;</button>
                         <button id="slidesNextBtn" onclick="showNextSlide()" title="Næste slide">&gt;</button>
+                        <button id="slidesFullscreenBtn" onclick="toggleSlidesFullscreen()" title="Forstor">⛶</button>
                         <button id="slidesRemoveBtn" onclick="removeCurrentSlide()" title="Fjern slide">-</button>
                     </div>
                 </div>
@@ -204,6 +236,17 @@
                 <button id="nameCancelBtn" class="confirm-cancel">Nej</button>
                 <button id="nameOkBtn" class="confirm-ok">Gem</button>
             </div>
+        </div>
+    </div>
+
+    <div id="weeklyDayModal" class="weekly-day-modal" aria-hidden="true">
+        <div class="weekly-day-modal-backdrop"></div>
+        <div class="weekly-day-modal-content" role="dialog" aria-modal="true" aria-labelledby="weeklyDayModalTitle">
+            <div class="weekly-day-modal-header">
+                <h3 id="weeklyDayModalTitle">Dag</h3>
+                <button id="weeklyDayModalClose" class="weekly-day-modal-close" type="button">Luk</button>
+            </div>
+            <div id="weeklyDayModalContent" class="weekly-day-modal-body"></div>
         </div>
     </div>
 

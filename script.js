@@ -109,6 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setSnapButtonState();
     setupTemplateSelects();
     setupLibraryDrawer();
+    setupWeeklyDayModal();
+    setupTimeTimerDrawer();
     setupPushNotifications();
 });
 
@@ -298,6 +300,140 @@ function setupLibraryDrawer() {
         close: closeDrawer,
         isOpen: () => drawer.classList.contains('open')
     };
+}
+
+function setupTimeTimerDrawer() {
+    const drawer = document.getElementById('timeTimerDrawer');
+    const backdrop = document.getElementById('timeTimerBackdrop');
+    const panel = drawer ? drawer.querySelector('.time-timer-panel') : null;
+    const tab = document.getElementById('timeTimerTab');
+    if (!drawer || !backdrop || !panel || !tab) return;
+
+    const openDrawer = () => {
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('time-timer-open');
+        tab.setAttribute('aria-expanded', 'true');
+        if (libraryDrawerApi && libraryDrawerApi.isOpen()) {
+            libraryDrawerApi.close();
+        }
+    };
+
+    const closeDrawer = () => {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('time-timer-open');
+        tab.setAttribute('aria-expanded', 'false');
+    };
+
+    tab.addEventListener('click', () => {
+        if (drawer.classList.contains('open')) {
+            closeDrawer();
+        } else {
+            openDrawer();
+        }
+    });
+
+    backdrop.addEventListener('click', closeDrawer);
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!drawer.classList.contains('open')) return;
+        if (e.target.closest('.time-timer-panel') || e.target.closest('#timeTimerTab')) {
+            return;
+        }
+        closeDrawer();
+    });
+
+    setupTimeTimer();
+}
+
+const timeTimerState = {
+    running: false,
+    totalMs: 0,
+    remainingMs: 0,
+    intervalId: null
+};
+
+function setupTimeTimer() {
+    const circle = document.getElementById('timeTimerCircle');
+    const label = document.getElementById('timeTimerLabel');
+    const minutesInput = document.getElementById('timeTimerMinutes');
+    const secondsInput = document.getElementById('timeTimerSeconds');
+    const startBtn = document.getElementById('timeTimerStart');
+    const pauseBtn = document.getElementById('timeTimerPause');
+    const resetBtn = document.getElementById('timeTimerReset');
+    if (!circle || !label || !minutesInput || !secondsInput || !startBtn || !pauseBtn || !resetBtn) return;
+
+    const clampInputs = () => {
+        const minutes = Math.max(0, Math.min(240, parseInt(minutesInput.value || '0', 10)));
+        const seconds = Math.max(0, Math.min(59, parseInt(secondsInput.value || '0', 10)));
+        minutesInput.value = minutes;
+        secondsInput.value = seconds;
+        return { minutes, seconds };
+    };
+
+    const setDisplay = (remainingMs, totalMs) => {
+        const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        label.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const progress = totalMs > 0 ? remainingMs / totalMs : 0;
+        circle.style.setProperty('--progress', Math.max(0, Math.min(1, progress)).toFixed(4));
+    };
+
+    const syncFromInputs = () => {
+        const { minutes, seconds } = clampInputs();
+        const totalMs = (minutes * 60 + seconds) * 1000;
+        timeTimerState.totalMs = totalMs;
+        timeTimerState.remainingMs = totalMs;
+        setDisplay(totalMs, totalMs);
+    };
+
+    const stopTimer = () => {
+        timeTimerState.running = false;
+        if (timeTimerState.intervalId) {
+            clearInterval(timeTimerState.intervalId);
+            timeTimerState.intervalId = null;
+        }
+    };
+
+    const startTimer = () => {
+        if (timeTimerState.running) return;
+        if (timeTimerState.remainingMs <= 0) {
+            syncFromInputs();
+        }
+        if (timeTimerState.remainingMs <= 0) return;
+
+        timeTimerState.running = true;
+        const startTime = Date.now();
+        const startRemaining = timeTimerState.remainingMs;
+
+        timeTimerState.intervalId = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const nextRemaining = Math.max(0, startRemaining - elapsed);
+            timeTimerState.remainingMs = nextRemaining;
+            setDisplay(nextRemaining, timeTimerState.totalMs);
+            if (nextRemaining <= 0) {
+                stopTimer();
+            }
+        }, 100);
+    };
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', stopTimer);
+    resetBtn.addEventListener('click', () => {
+        stopTimer();
+        syncFromInputs();
+    });
+
+    minutesInput.addEventListener('change', () => {
+        if (!timeTimerState.running) syncFromInputs();
+    });
+    secondsInput.addEventListener('change', () => {
+        if (!timeTimerState.running) syncFromInputs();
+    });
+
+    syncFromInputs();
 }
 
 function closeLibraryDrawer() {
@@ -2349,6 +2485,32 @@ function removeCurrentSlide() {
     removeSlideAt(currentSlideIndex);
 }
 
+function updateSlidesFullscreenButton() {
+    const btn = document.getElementById('slidesFullscreenBtn');
+    if (!btn) return;
+    const isFullscreen = !!document.fullscreenElement;
+    btn.textContent = isFullscreen ? '⤢' : '⛶';
+    btn.title = isFullscreen ? 'Afslut fuld skærm' : 'Forstor';
+}
+
+function toggleSlidesFullscreen() {
+    const display = document.querySelector('.slides-display');
+    if (!display) return;
+
+    if (!document.fullscreenElement) {
+        display.requestFullscreen().then(updateSlidesFullscreenButton).catch(() => {
+            // Ignore fullscreen errors
+        });
+        return;
+    }
+
+    document.exitFullscreen().then(updateSlidesFullscreenButton).catch(() => {
+        // Ignore fullscreen errors
+    });
+}
+
+document.addEventListener('fullscreenchange', updateSlidesFullscreenButton);
+
 // Clear all slides
 function clearSlides() {
     if (!confirm('Slet alle slides?')) return;
@@ -2386,6 +2548,73 @@ let highlightCurrentDay = false;
 const weeklyDays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const weeklyDaysKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 let weeklyPointerDrag = null;
+let weeklyDayModalApi = null;
+
+function setupWeeklyDayModal() {
+    const modal = document.getElementById('weeklyDayModal');
+    const backdrop = modal ? modal.querySelector('.weekly-day-modal-backdrop') : null;
+    const closeBtn = document.getElementById('weeklyDayModalClose');
+    if (!modal || !backdrop || !closeBtn) return;
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('weekly-day-open');
+    };
+
+    const openModal = (dayKey) => {
+        renderWeeklyDayModal(dayKey);
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('weekly-day-open');
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+            closeModal();
+        }
+    });
+
+    weeklyDayModalApi = { open: openModal, close: closeModal };
+}
+
+function openWeeklyDayModal(dayKey) {
+    if (weeklyDayModalApi) {
+        weeklyDayModalApi.open(dayKey);
+    }
+}
+
+function renderWeeklyDayModal(dayKey) {
+    const container = document.getElementById('weeklyDayModalContent');
+    const title = document.getElementById('weeklyDayModalTitle');
+    if (!container || !title) return;
+
+    const dayIndex = weeklyDaysKey.indexOf(dayKey);
+    title.textContent = dayIndex >= 0 ? weeklyDays[dayIndex] : 'Dag';
+    container.innerHTML = '';
+
+    const dayColumn = document.createElement('div');
+    dayColumn.className = 'day-column day-column-modal';
+    dayColumn.dataset.day = dayKey;
+
+    const itemsContainer = document.createElement('div');
+    itemsContainer.className = 'day-items';
+    itemsContainer.dataset.day = dayKey;
+
+    if (weeklyData[dayKey] && weeklyData[dayKey].length > 0) {
+        weeklyData[dayKey].forEach((item, itemIndex) => {
+            const dayItem = createDayItem(item, dayKey, itemIndex);
+            itemsContainer.appendChild(dayItem);
+        });
+    }
+
+    dayColumn.appendChild(itemsContainer);
+    container.appendChild(dayColumn);
+
+    setupWeeklyListeners();
+}
 
 function clearWeeklyDragTargets(container) {
     if (!container) return;
@@ -2583,7 +2812,20 @@ function renderWeeklyGrid() {
         // Day header
         const dayHeader = document.createElement('div');
         dayHeader.className = 'day-header';
-        dayHeader.textContent = weeklyDays[index];
+        const dayTitle = document.createElement('span');
+        dayTitle.className = 'day-header-title';
+        dayTitle.textContent = weeklyDays[index];
+        const popoutBtn = document.createElement('button');
+        popoutBtn.className = 'day-popout-btn';
+        popoutBtn.type = 'button';
+        popoutBtn.textContent = 'Udvid';
+        popoutBtn.title = 'Forstor dag';
+        popoutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openWeeklyDayModal(dayKey);
+        });
+        dayHeader.appendChild(dayTitle);
+        dayHeader.appendChild(popoutBtn);
         dayColumn.appendChild(dayHeader);
         
         // Items container
