@@ -627,6 +627,30 @@ function setupInstallButton() {
     }
 }
 
+function getActiveTemplate() {
+    const weeklyArea = document.getElementById('weeklyArea');
+    const slidesArea = document.getElementById('slidesArea');
+    if (weeklyArea && weeklyArea.style.display === 'flex') return 'weekly';
+    if (slidesArea && slidesArea.style.display === 'flex') return 'slides';
+    return 'canvas';
+}
+
+function addToCurrentTemplate(content, name = '', type = 'emoji') {
+    const view = getActiveTemplate();
+    if (view === 'slides') {
+        addToSlides(content, name, type);
+        return;
+    }
+
+    if (view === 'weekly') {
+        const dayKey = getCurrentDayKey();
+        addToWeeklyDay(dayKey, { content, name: name || 'Element', type });
+        return;
+    }
+
+    addToCanvasQuick(content, name, type);
+}
+
 // Initialize the library with default pictograms
 function initializeLibrary() {
     const library = document.getElementById('library');
@@ -662,14 +686,23 @@ function initializeLibrary() {
         
         libItem.appendChild(titleDiv);
         
-        // Add to Slides button
+        // Add to current template button
         const addToSlidesBtn = document.createElement('button');
         addToSlidesBtn.className = 'library-item-add-slides';
         addToSlidesBtn.innerHTML = '➕';
-        addToSlidesBtn.title = 'Tilføj til Slides';
+        addToSlidesBtn.title = 'Tilføj til aktiv template';
+        addToSlidesBtn.draggable = true;
         addToSlidesBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            addToSlides(item.emoji, libItem.dataset.displayName || item.name);
+            addToCurrentTemplate(item.emoji, libItem.dataset.displayName || item.name, 'emoji');
+        });
+        addToSlidesBtn.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            handleLibraryDragStart(e);
+        });
+        addToSlidesBtn.addEventListener('dragend', (e) => {
+            e.stopPropagation();
+            handleDragEnd(e);
         });
         libItem.appendChild(addToSlidesBtn);
 
@@ -708,14 +741,15 @@ function initializeLibrary() {
 // Handle drag start from library
 function handleLibraryDragStart(e) {
     isLibraryDragging = true;
-    draggedElement = e.target.cloneNode(true);
+    const source = e.target.closest('.library-item') || e.target;
+    draggedElement = source.cloneNode(true);
     draggedElement.classList.remove('selected');
     e.dataTransfer.effectAllowed = 'copy';
     
     // Get the actual emoji or image from the element
-    const emojiElement = e.target.dataset.emoji || e.target.textContent;
-    const displayName = e.target.dataset.displayName || e.target.dataset.name || '';
-    const itemType = e.target.dataset.itemType || 'emoji';
+    const emojiElement = source.dataset.emoji || source.dataset.dataUrl || source.textContent;
+    const displayName = source.dataset.displayName || source.dataset.displayTitle || source.dataset.name || '';
+    const itemType = source.dataset.itemType || 'emoji';
     
     console.log('Drag start:', { emojiElement, displayName, itemType });
     
@@ -1447,14 +1481,23 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     };
     item.appendChild(deleteBtn);
     
-    // Add to Slides button
+    // Add to current template button
     const addToSlidesBtn = document.createElement('button');
     addToSlidesBtn.className = 'library-item-add-slides';
     addToSlidesBtn.innerHTML = '➕';
-    addToSlidesBtn.title = 'Tilføj til Slides';
+    addToSlidesBtn.title = 'Tilføj til aktiv template';
+    addToSlidesBtn.draggable = true;
     addToSlidesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        addToSlides(dataUrl, item.dataset.displayTitle || cleanName, 'image');
+        addToCurrentTemplate(dataUrl, item.dataset.displayTitle || cleanName, 'image');
+    });
+    addToSlidesBtn.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+        handleLibraryDragStart(e);
+    });
+    addToSlidesBtn.addEventListener('dragend', (e) => {
+        e.stopPropagation();
+        handleDragEnd(e);
     });
     item.appendChild(addToSlidesBtn);
     
