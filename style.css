@@ -10,6 +10,7 @@ body {
     min-height: 100vh;
     color: #2c3e50;
     letter-spacing: 0.3px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .container {
@@ -299,6 +300,7 @@ header p {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overscroll-behavior: contain;
 }
 
 .search-section {
@@ -306,6 +308,31 @@ header p {
     padding: 0;
     margin-bottom: 15px;
     flex-shrink: 0;
+}
+
+.library-filters {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.library-filter {
+    border: 1px solid #e0e0e0;
+    background: #ffffff;
+    color: #333;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 0.75em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.library-filter.active {
+    background: #667eea;
+    color: #ffffff;
+    border-color: #667eea;
 }
 
 .scrollable-section {
@@ -317,6 +344,7 @@ header p {
     flex: 1;
     min-height: 0;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .section {
@@ -1199,6 +1227,7 @@ header p {
         padding: 10px;
         max-height: calc(100vh - 250px);
         overflow-y: auto;
+        overscroll-behavior: contain;
     }
 
     .library-drawer .sidebar {
@@ -1220,6 +1249,13 @@ header p {
 
     .canvas-item .emoji {
         font-size: 2.2em;
+    }
+
+    .library-tab,
+    .time-timer-tab {
+        padding: 12px 14px;
+        font-size: 0.9em;
+        min-height: 44px;
     }
 }
 
@@ -1283,6 +1319,7 @@ header p {
         width: 100%;
         font-size: 0.95em;
         padding: 12px 14px;
+        min-height: 44px;
     }
 
     .canvas-center-actions,
@@ -1293,6 +1330,7 @@ header p {
 
     .canvas-clear-btn {
         width: 100%;
+        min-height: 44px;
     }
 
     .template-select-row {
@@ -1356,6 +1394,7 @@ header p {
 
     .slides-buttons button {
         flex: 1 1 160px;
+        min-height: 44px;
     }
 
     .slides-display-content img {
@@ -1369,6 +1408,27 @@ header p {
 
     .weekly-area {
         padding: 16px;
+    }
+
+    .weekly-buttons button {
+        min-height: 44px;
+    }
+
+    .slides-display-controls button {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
+
+    .day-popout-btn,
+    .day-lock-btn {
+        padding: 8px 12px;
+        min-height: 32px;
+    }
+
+    .time-timer-circle {
+        width: 180px;
+        height: 180px;
     }
 
     .weekly-header {
@@ -1480,6 +1540,11 @@ header p {
 
     .day-item {
         padding: 12px 14px;
+    }
+
+    .time-timer-circle {
+        width: 160px;
+        height: 160px;
     }
 
     .day-item-emoji {
@@ -1739,7 +1804,24 @@ header p {
     background: #ffffff;
 }
 
+.slides-display.fullscreen-fallback {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+    border: none;
+    background: #ffffff;
+    z-index: 4000;
+}
+
 .slides-display:fullscreen .slides-display-controls {
+    bottom: 20px;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.slides-display.fullscreen-fallback .slides-display-controls {
     bottom: 20px;
     background: rgba(255, 255, 255, 0.95);
 }
@@ -1747,6 +1829,21 @@ header p {
 .slides-display:fullscreen .slides-display-content {
     max-width: 95vw;
     max-height: 92vh;
+}
+
+.slides-display.fullscreen-fallback .slides-display-content {
+    max-width: 95vw;
+    max-height: 92vh;
+}
+
+body.slides-fullscreen-fallback {
+    overflow: hidden;
+}
+
+body.slides-fullscreen-fallback header,
+body.slides-fullscreen-fallback .library-tab,
+body.slides-fullscreen-fallback .time-timer-tab {
+    display: none;
 }
 
 .slides-display.drag-over {
@@ -1975,6 +2072,23 @@ header p {
     transition: all 0.2s ease;
 }
 
+.day-lock-btn {
+    border: none;
+    background: rgba(255, 193, 7, 0.15);
+    color: #8a6d00;
+    font-weight: 700;
+    font-size: 0.75em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.day-lock-btn:hover {
+    background: rgba(255, 193, 7, 0.25);
+    transform: translateY(-1px);
+}
+
 .day-popout-btn:hover {
     background: rgba(102, 126, 234, 0.2);
     transform: translateY(-1px);
@@ -1982,6 +2096,28 @@ header p {
 
 .day-column.today .day-header {
     color: #ffc107;
+}
+
+.day-column.locked {
+    border-color: #f4cccc;
+    background: #fffafa;
+}
+
+.day-column.locked .day-items {
+    opacity: 0.6;
+}
+
+.day-column.locked::after {
+    content: '🔒 Låst';
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-size: 0.85em;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: #c98f00;
+    border: 1px solid #f4cccc;
 }
 
 .weekly-day-modal {

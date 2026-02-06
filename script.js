@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLibrary();
     setupCanvasListeners();
     setupSearchListener();
+    setupLibraryFilters();
     setupUploadListener();
     setupCanvasSizeListener();
     setupBgColorListener();
@@ -415,6 +416,7 @@ function setupTimeTimer() {
             setDisplay(nextRemaining, timeTimerState.totalMs);
             if (nextRemaining <= 0) {
                 stopTimer();
+                triggerTimeTimerComplete();
             }
         }, 100);
     };
@@ -434,6 +436,28 @@ function setupTimeTimer() {
     });
 
     syncFromInputs();
+}
+
+function triggerTimeTimerComplete() {
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.15;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+        osc.onended = () => ctx.close();
+    } catch (err) {
+        console.log('Kunne ikke afspille lyd', err);
+    }
 }
 
 function closeLibraryDrawer() {
@@ -873,6 +897,8 @@ function initializeLibrary() {
         
         library.appendChild(libItem);
     });
+
+    applyLibraryFilters();
 }
 
 // Handle drag start from library
@@ -1389,25 +1415,43 @@ function editItemLabel(labelElement, item) {
     });
 }
 
+let libraryFilter = 'all';
+
+function setupLibraryFilters() {
+    const filterContainer = document.getElementById('libraryFilters');
+    if (!filterContainer) return;
+
+    filterContainer.querySelectorAll('.library-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            libraryFilter = btn.dataset.filter || 'all';
+            filterContainer.querySelectorAll('.library-filter').forEach(el => {
+                el.classList.toggle('active', el === btn);
+            });
+            applyLibraryFilters();
+        });
+    });
+}
+
+function applyLibraryFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const items = document.querySelectorAll('#library .library-item');
+
+    items.forEach(item => {
+        const name = (item.dataset.name || '').toLowerCase();
+        const type = item.dataset.itemType || 'emoji';
+        const matchesQuery = !query || name.includes(query);
+        const matchesFilter = libraryFilter === 'all' || type === libraryFilter;
+        item.style.display = matchesQuery && matchesFilter ? 'flex' : 'none';
+    });
+}
+
 // Setup search listener
 function setupSearchListener() {
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const items = document.querySelectorAll('.library-item');
-        
-        console.log('Search for:', query, 'Found items:', items.length);
-        
-        items.forEach(item => {
-            if (!query) {
-                // No search - show everything
-                item.style.display = 'flex';
-            } else {
-                // Search active - filter
-                const name = item.dataset.name?.toLowerCase() || '';
-                item.style.display = name.includes(query) ? 'flex' : 'none';
-            }
-        });
+        console.log('Search for:', e.target.value.toLowerCase().trim());
+        applyLibraryFilters();
     });
 }
 
@@ -1684,6 +1728,7 @@ function addUploadedItemToLibrary(dataUrl, fileName, displayNameOverride = '') {
     
     // Track the uploaded item
     uploadedLibraryItems.push({ id: item.id, dataUrl, fileName, element: item });
+    applyLibraryFilters();
 }
 
 // Edit emoji library item title
@@ -2242,6 +2287,118 @@ async function downloadSlidesAsPdf() {
     pdf.save('slides_' + new Date().getTime() + '.pdf');
 }
 
+function loadImageForExport(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+async function renderWeeklyToCanvas() {
+    const columnCount = 7;
+    const gap = 16;
+    const padding = 24;
+    const headerHeight = 36;
+    const itemHeight = 60;
+    const itemGap = 10;
+    const maxItems = Math.max(1, ...weeklyDaysKey.map(key => (weeklyData[key] || []).length));
+    const contentHeight = headerHeight + maxItems * itemHeight + (maxItems - 1) * itemGap;
+    const width = 1400;
+    const columnWidth = Math.floor((width - padding * 2 - gap * (columnCount - 1)) / columnCount);
+    const height = padding * 2 + contentHeight;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    for (let i = 0; i < weeklyDaysKey.length; i += 1) {
+        const dayKey = weeklyDaysKey[i];
+        const x = padding + i * (columnWidth + gap);
+        const y = padding;
+
+        ctx.fillStyle = isWeeklyDayLocked(dayKey) ? '#fff7f0' : '#ffffff';
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 2;
+        ctx.fillRect(x, y, columnWidth, contentHeight);
+        ctx.strokeRect(x, y, columnWidth, contentHeight);
+
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(weeklyDays[i], x + 10, y + 8);
+
+        const items = weeklyData[dayKey] || [];
+        for (let j = 0; j < items.length; j += 1) {
+            const item = items[j];
+            const itemY = y + headerHeight + j * (itemHeight + itemGap);
+
+            ctx.fillStyle = '#f8f9fd';
+            ctx.strokeStyle = '#e8eaf6';
+            ctx.lineWidth = 1;
+            ctx.fillRect(x + 8, itemY, columnWidth - 16, itemHeight);
+            ctx.strokeRect(x + 8, itemY, columnWidth - 16, itemHeight);
+
+            if (item.type === 'image') {
+                const img = await loadImageForExport(item.content);
+                if (img) {
+                    ctx.save();
+                    ctx.translate(x + 8, itemY);
+                    drawImageContain(ctx, img, columnWidth - 16, itemHeight);
+                    ctx.restore();
+                }
+            } else {
+                ctx.fillStyle = '#111111';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(item.content, x + columnWidth / 2, itemY + itemHeight / 2);
+            }
+        }
+    }
+
+    return { canvas, width, height };
+}
+
+async function downloadWeeklyAsImage() {
+    const result = await renderWeeklyToCanvas();
+    const canvas = result.canvas;
+    canvas.toBlob(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ugeoversigt_' + new Date().getTime() + '.png';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+}
+
+async function downloadWeeklyAsPdf() {
+    const jspdf = window.jspdf;
+    if (!jspdf || !jspdf.jsPDF) {
+        alert('PDF-biblioteket er ikke indlæst.');
+        return;
+    }
+
+    const result = await renderWeeklyToCanvas();
+    const dataUrl = result.canvas.toDataURL('image/png');
+    const pdf = new jspdf.jsPDF({
+        orientation: result.width >= result.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [result.width, result.height]
+    });
+
+    pdf.addImage(dataUrl, 'PNG', 0, 0, result.width, result.height);
+    pdf.save('ugeoversigt_' + new Date().getTime() + '.pdf');
+}
+
 // ===== SLIDES/TEMPLATE FUNCTIONALITY =====
 
 function setView(view) {
@@ -2496,23 +2653,36 @@ function removeCurrentSlide() {
 function updateSlidesFullscreenButton() {
     const btn = document.getElementById('slidesFullscreenBtn');
     if (!btn) return;
-    const isFullscreen = !!document.fullscreenElement;
+    const isFullscreen = !!document.fullscreenElement || document.body.classList.contains('slides-fullscreen-fallback');
     btn.textContent = isFullscreen ? '⤢' : '⛶';
     btn.title = isFullscreen ? 'Afslut fuld skærm' : 'Forstor';
+}
+
+function isNativeFullscreenSupported(el) {
+    return !!(el && (el.requestFullscreen || el.webkitRequestFullscreen));
 }
 
 function toggleSlidesFullscreen() {
     const display = document.querySelector('.slides-display');
     if (!display) return;
 
+    if (!isNativeFullscreenSupported(display)) {
+        display.classList.toggle('fullscreen-fallback');
+        document.body.classList.toggle('slides-fullscreen-fallback');
+        updateSlidesFullscreenButton();
+        return;
+    }
+
     if (!document.fullscreenElement) {
-        display.requestFullscreen().then(updateSlidesFullscreenButton).catch(() => {
+        const request = display.requestFullscreen || display.webkitRequestFullscreen;
+        request.call(display).then(updateSlidesFullscreenButton).catch(() => {
             // Ignore fullscreen errors
         });
         return;
     }
 
-    document.exitFullscreen().then(updateSlidesFullscreenButton).catch(() => {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    exit.call(document).then(updateSlidesFullscreenButton).catch(() => {
         // Ignore fullscreen errors
     });
 }
@@ -2557,6 +2727,38 @@ const weeklyDays = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag
 const weeklyDaysKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 let weeklyPointerDrag = null;
 let weeklyDayModalApi = null;
+let weeklyDayModalOpenKey = null;
+let weeklyDayLocks = {
+    monday: false,
+    tuesday: false,
+    wednesday: false,
+    thursday: false,
+    friday: false,
+    saturday: false,
+    sunday: false
+};
+
+try {
+    const storedLocks = localStorage.getItem('weeklyDayLocks');
+    if (storedLocks) {
+        weeklyDayLocks = { ...weeklyDayLocks, ...JSON.parse(storedLocks) };
+    }
+} catch (err) {
+    console.log('Could not load weekly day locks', err);
+}
+
+function isWeeklyDayLocked(dayKey) {
+    return !!weeklyDayLocks[dayKey];
+}
+
+function toggleWeeklyDayLock(dayKey) {
+    weeklyDayLocks[dayKey] = !weeklyDayLocks[dayKey];
+    localStorage.setItem('weeklyDayLocks', JSON.stringify(weeklyDayLocks));
+    renderWeeklyGrid();
+    if (weeklyDayModalOpenKey === dayKey) {
+        renderWeeklyDayModal(dayKey);
+    }
+}
 
 function setupWeeklyDayModal() {
     const modal = document.getElementById('weeklyDayModal');
@@ -2568,6 +2770,7 @@ function setupWeeklyDayModal() {
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('weekly-day-open');
+        weeklyDayModalOpenKey = null;
     };
 
     const openModal = (dayKey) => {
@@ -2575,6 +2778,7 @@ function setupWeeklyDayModal() {
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('weekly-day-open');
+        weeklyDayModalOpenKey = dayKey;
     };
 
     closeBtn.addEventListener('click', closeModal);
@@ -2606,6 +2810,9 @@ function renderWeeklyDayModal(dayKey) {
     const dayColumn = document.createElement('div');
     dayColumn.className = 'day-column day-column-modal';
     dayColumn.dataset.day = dayKey;
+    if (isWeeklyDayLocked(dayKey)) {
+        dayColumn.classList.add('locked');
+    }
 
     const itemsContainer = document.createElement('div');
     itemsContainer.className = 'day-items';
@@ -2679,6 +2886,7 @@ function getWeeklyDropTarget(container, clientY, clientX, excludeItem) {
 }
 
 function startWeeklyPointerDrag(e, dayKey, itemIndex) {
+    if (isWeeklyDayLocked(dayKey)) return;
     const itemEl = e.currentTarget;
     const container = itemEl.closest('.day-items');
     if (!container) return;
@@ -2823,6 +3031,17 @@ function renderWeeklyGrid() {
         const dayTitle = document.createElement('span');
         dayTitle.className = 'day-header-title';
         dayTitle.textContent = weeklyDays[index];
+
+        const lockBtn = document.createElement('button');
+        lockBtn.className = 'day-lock-btn';
+        lockBtn.type = 'button';
+        lockBtn.textContent = isWeeklyDayLocked(dayKey) ? '🔒' : '🔓';
+        lockBtn.title = isWeeklyDayLocked(dayKey) ? 'Lås op' : 'Lås dag';
+        lockBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleWeeklyDayLock(dayKey);
+        });
+
         const popoutBtn = document.createElement('button');
         popoutBtn.className = 'day-popout-btn';
         popoutBtn.type = 'button';
@@ -2832,10 +3051,16 @@ function renderWeeklyGrid() {
             e.stopPropagation();
             openWeeklyDayModal(dayKey);
         });
+
         dayHeader.appendChild(dayTitle);
+        dayHeader.appendChild(lockBtn);
         dayHeader.appendChild(popoutBtn);
         dayColumn.appendChild(dayHeader);
         
+        if (isWeeklyDayLocked(dayKey)) {
+            dayColumn.classList.add('locked');
+        }
+
         // Items container
         const itemsContainer = document.createElement('div');
         itemsContainer.className = 'day-items';
@@ -2888,6 +3113,7 @@ function setupWeeklyListeners() {
     // Drag over day items containers
     document.querySelectorAll('.day-items').forEach(container => {
         container.addEventListener('dragover', (e) => {
+            if (isWeeklyDayLocked(container.dataset.day)) return;
             e.preventDefault();
             const isWeekly = (e.dataTransfer.types || []).includes('weeklyItem');
             e.dataTransfer.dropEffect = isWeekly ? 'move' : 'copy';
@@ -2901,6 +3127,7 @@ function setupWeeklyListeners() {
         });
         
         container.addEventListener('drop', (e) => {
+            if (isWeeklyDayLocked(container.dataset.day)) return;
             e.preventDefault();
             container.classList.remove('drag-over');
             
@@ -2946,6 +3173,7 @@ function setupWeeklyListeners() {
 }
 
 function addToWeeklyDay(dayKey, item, insertIndex = null) {
+    if (isWeeklyDayLocked(dayKey)) return;
     if (!weeklyData[dayKey]) {
         weeklyData[dayKey] = [];
     }
@@ -2969,6 +3197,7 @@ function addToWeeklyDay(dayKey, item, insertIndex = null) {
 }
 
 function moveWeeklyItem(fromDay, fromIndex, toDay, toIndex) {
+    if (isWeeklyDayLocked(fromDay) || isWeeklyDayLocked(toDay)) return;
     if (!weeklyData[fromDay] || !weeklyData[fromDay][fromIndex]) return;
     if (!weeklyData[toDay]) weeklyData[toDay] = [];
 
