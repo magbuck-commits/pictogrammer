@@ -206,6 +206,14 @@ header p {
     color: #333;
 }
 
+.library-item-visual {
+    width: 100%;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .library-item-add-slides {
     position: absolute;
     top: 2px;
@@ -261,7 +269,7 @@ header p {
     transform: none;
     margin-top: 8px;
     padding: 0;
-    font-size: 0.72em;
+    font-size: 0.75em;
     font-weight: 700;
     background: transparent;
     border: none;

@@ -663,6 +663,7 @@ function initializeLibrary() {
         
         // Icon holder
         const emojiHolder = document.createElement('div');
+        emojiHolder.className = 'library-item-visual';
         emojiHolder.style.flex = '1';
         emojiHolder.style.display = 'flex';
         emojiHolder.style.alignItems = 'center';
@@ -1434,6 +1435,7 @@ function addUploadedItemToLibrary(dataUrl, fileName) {
     
     // Image holder
     const imgHolder = document.createElement('div');
+    imgHolder.className = 'library-item-visual';
     imgHolder.style.flex = '1';
     imgHolder.style.display = 'flex';
     imgHolder.style.alignItems = 'center';
