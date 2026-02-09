@@ -30,6 +30,11 @@
                     <div class="section search-section">
                         <h2>Søg</h2>
                         <input type="text" id="searchInput" placeholder="Søg i bibliotek...">
+                        <div class="library-filters" id="libraryFilters">
+                            <button type="button" class="library-filter active" data-filter="all">Alle</button>
+                            <button type="button" class="library-filter" data-filter="emoji">Emoji</button>
+                            <button type="button" class="library-filter" data-filter="image">Billeder</button>
+                        </div>
                     </div>
 
                     <div class="section recent-section">
@@ -196,6 +201,8 @@
                     <div class="weekly-buttons">
                         <button onclick="saveLayout()">💾 Gem Layout</button>
                         <button id="highlightToggleBtn" onclick="toggleDayHighlight()">✨ Fremhæv dag: Fra</button>
+                        <button onclick="downloadWeeklyAsImage()">📷 Download uge (PNG)</button>
+                        <button onclick="downloadWeeklyAsPdf()">📄 Download uge (PDF)</button>
                     </div>
                 </div>
             </main>

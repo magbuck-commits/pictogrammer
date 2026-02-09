@@ -1454,8 +1454,13 @@ header p {
     }
 
     .day-item-emoji {
-        font-size: 1.8em;
-        min-width: 34px;
+        font-size: 2.4em;
+        min-width: 40px;
+    }
+
+    .day-item img {
+        width: 56px;
+        height: 56px;
     }
 
     .day-item-name {
@@ -1548,8 +1553,13 @@ header p {
     }
 
     .day-item-emoji {
-        font-size: 1.6em;
-        min-width: 30px;
+        font-size: 2.1em;
+        min-width: 36px;
+    }
+
+    .day-item img {
+        width: 48px;
+        height: 48px;
     }
 
     .day-item-name {
@@ -2228,8 +2238,8 @@ body.slides-fullscreen-fallback .time-timer-tab {
 .day-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 12px;
+    padding: 12px 14px;
     background: linear-gradient(135deg, #f8f9fd 0%, #fafbfe 100%);
     border-radius: 10px;
     cursor: grab;
@@ -2275,8 +2285,8 @@ body.slides-fullscreen-fallback .time-timer-tab {
 }
 
 .day-item-emoji {
-    font-size: 1.5em;
-    min-width: 30px;
+    font-size: 2.2em;
+    min-width: 40px;
     text-align: center;
     flex: 1;
     display: flex;
@@ -2285,8 +2295,8 @@ body.slides-fullscreen-fallback .time-timer-tab {
 }
 
 .day-item img {
-    width: 42px;
-    height: 42px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
 }
 
