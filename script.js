@@ -2883,6 +2883,82 @@ function toggleWeeklyDayLock(dayKey) {
     }
 }
 
+function showEnlargedWeeklyItem(dayKey, itemIndex) {
+    if (!weeklyData[dayKey] || !weeklyData[dayKey][itemIndex]) return;
+    
+    const item = weeklyData[dayKey][itemIndex];
+    const modal = document.getElementById('enlargeModal');
+    if (!modal) {
+        // Create modal if it doesn't exist
+        createEnlargeModal();
+    }
+    
+    const modalContent = document.getElementById('enlargeModalContent');
+    if (!modalContent) return;
+    
+    modalContent.innerHTML = '';
+    
+    if (item.type === 'image') {
+        const img = document.createElement('img');
+        img.src = item.content;
+        img.style.maxWidth = '90vw';
+        img.style.maxHeight = '90vh';
+        img.style.objectFit = 'contain';
+        modalContent.appendChild(img);
+    } else {
+        const emoji = document.createElement('div');
+        emoji.style.fontSize = 'min(60vw, 60vh)';
+        emoji.style.textAlign = 'center';
+        emoji.style.lineHeight = '1';
+        emoji.textContent = item.content;
+        modalContent.appendChild(emoji);
+    }
+    
+    // Show the modal
+    document.getElementById('enlargeModal').classList.add('active');
+}
+
+function createEnlargeModal() {
+    // Create modal structure
+    const modal = document.createElement('div');
+    modal.id = 'enlargeModal';
+    modal.className = 'enlarge-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    
+    const backdrop = document.createElement('div');
+    backdrop.className = 'enlarge-modal-backdrop';
+    backdrop.addEventListener('click', closeEnlargeModal);
+    
+    const content = document.createElement('div');
+    content.id = 'enlargeModalContent';
+    content.className = 'enlarge-modal-content';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'enlarge-modal-close';
+    closeBtn.textContent = '×';
+    closeBtn.title = 'Luk';
+    closeBtn.addEventListener('click', closeEnlargeModal);
+    
+    modal.appendChild(backdrop);
+    modal.appendChild(content);
+    modal.appendChild(closeBtn);
+    document.body.appendChild(modal);
+    
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeEnlargeModal();
+        }
+    });
+}
+
+function closeEnlargeModal() {
+    const modal = document.getElementById('enlargeModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
 function setupWeeklyDayModal() {
     const modal = document.getElementById('weeklyDayModal');
     const backdrop = modal ? modal.querySelector('.weekly-day-modal-backdrop') : null;
@@ -3017,6 +3093,12 @@ function startWeeklyPointerDrag(e, dayKey, itemIndex) {
     e.preventDefault();
     e.stopPropagation();
     
+    // Track initial pointer position to detect click vs drag
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTime = Date.now();
+    let hasMoved = false;
+    
     // Create ghost element that follows pointer
     const ghost = itemEl.cloneNode(true);
     ghost.classList.add('drag-ghost');
@@ -3049,6 +3131,13 @@ function startWeeklyPointerDrag(e, dayKey, itemIndex) {
 
     const onMove = (ev) => {
         if (!weeklyPointerDrag || weeklyPointerDrag.pointerId !== ev.pointerId) return;
+        
+        // Check if pointer has moved significantly
+        const deltaX = Math.abs(ev.clientX - startX);
+        const deltaY = Math.abs(ev.clientY - startY);
+        if (deltaX > 5 || deltaY > 5) {
+            hasMoved = true;
+        }
         
         // Update ghost position to follow pointer
         if (weeklyPointerDrag.ghost) {
@@ -3091,6 +3180,7 @@ function startWeeklyPointerDrag(e, dayKey, itemIndex) {
         const targetContainer = weeklyPointerDrag.targetContainer;
         const targetDay = targetContainer ? targetContainer.dataset.day : null;
         const targetIndex = weeklyPointerDrag.targetIndex;
+        const elapsedTime = Date.now() - startTime;
 
         // Remove ghost element
         if (weeklyPointerDrag.ghost && weeklyPointerDrag.ghost.parentNode) {
@@ -3103,6 +3193,14 @@ function startWeeklyPointerDrag(e, dayKey, itemIndex) {
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onEnd);
         document.removeEventListener('pointercancel', onEnd);
+
+        // Check if this was a click (not moved much and quick release)
+        if (!hasMoved && elapsedTime < 300) {
+            // This was a click - show enlarged view
+            weeklyPointerDrag = null;
+            showEnlargedWeeklyItem(dayKey, itemIndex);
+            return;
+        }
 
         if (targetDay !== null && targetDay !== undefined) {
             moveWeeklyItem(weeklyPointerDrag.fromDay, weeklyPointerDrag.fromIndex, targetDay, targetIndex);

@@ -412,7 +412,7 @@ header p {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 10;
@@ -2210,6 +2210,20 @@ body.slides-fullscreen-fallback .time-timer-tab {
     min-height: 320px;
 }
 
+.weekly-day-modal .day-item-emoji {
+    font-size: 4em;
+    min-width: 80px;
+}
+
+.weekly-day-modal .day-item img {
+    width: 120px;
+    height: 120px;
+}
+
+.weekly-day-modal .day-item {
+    padding: 18px 20px;
+}
+
 .day-items {
     flex: 1;
     display: flex;
@@ -2325,4 +2339,83 @@ body.slides-fullscreen-fallback .time-timer-tab {
 
 .day-item-remove:hover {
     background: #ff5252;
+}
+
+/* ===== ENLARGE MODAL ===== */
+.enlarge-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.enlarge-modal.active {
+    display: flex;
+}
+
+.enlarge-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+}
+
+.enlarge-modal-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 90vw;
+    max-height: 90vh;
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.enlarge-modal-content img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.enlarge-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.enlarge-modal-close:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
